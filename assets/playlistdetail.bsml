@@ -1,0 +1,23 @@
+<bg xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/RedBrumbler/Quest-BSML-Docs/gh-pages/schema.xsd">
+    <horizontal child-align="MiddleCenter" child-control-height="true">
+        <vertical horizontal-fit="PreferredSize" vertical-fit="PreferredSize" child-expand-width="true" child-control-height="false" spacing="-2">
+            <horizontal child-control-width="true" child-expand-width="true">
+                <vertical pref-width="15" pref-height="15">
+                    <image id="cover" preserve-aspect="false"/>
+                </vertical>
+                <vertical spacing="-1" pref-width="42" pref-height="10">
+                    <text id="name" align="Left" word-wrapping="true"/>
+                    <text id="author" align="Left" word-wrapping="true" color="#FFFFFFBF"/>
+                </vertical>
+            </horizontal>
+            <horizontal pref-width="63" pref-height="44" pad-left="-3">
+                <text-page id="description"/>
+            </horizontal>
+            <horizontal horizontal-fit="PreferredSize" spacing="2">
+                <button id="download" text="Download" on-click="downloadClicked" pref-height="10" pref-width="18"/>
+                <button id="downloadSongs" text="Download + Songs" on-click="downloadSongsClicked" pref-height="10" pref-width="30"/>
+            </horizontal>
+        </vertical>
+        <list id="list" data="songData" pref-width="55" expand-cell="true" show-scrollbar="true" stick-scrolling="true"/>
+    </horizontal>
+</bg>

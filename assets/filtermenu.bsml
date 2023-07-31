@@ -1,0 +1,8 @@
+<bg xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/RedBrumbler/Quest-BSML-Docs/gh-pages/schema.xsd">
+    <horizontal id="filterBar" spacing="3" child-control-width="false" horizontal-fit="PreferredSize">
+        <vertical vertical-fit="MinSize" min-height="8" child-control-height="true" pref-width="29">
+            <icon-segments id="sourceIconControl" data="sourceIconData" select-cell="sourceSelected" spacing="0.5"/>
+        </vertical>
+        <icon-button id="filterButton" horizontal-fit="PreferredSize" vertical-fit="PreferredSize" pref-width="9" pref-height="9" on-click="filterClicked" icon="#FilterIcon"/>
+    </horizontal>
+</bg>

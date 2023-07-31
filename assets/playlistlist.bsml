@@ -1,0 +1,8 @@
+<bg xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/RedBrumbler/Quest-BSML-Docs/gh-pages/schema.xsd">
+    <vertical child-align="MiddleCenter">
+        <horizontal>
+            <loading-indicator id="loadingIndicator" preserve-aspect="true" pref-width="10" pref-height="10"/>
+        </horizontal>
+        <list id="list" data="playlistData" active="false" expand-cell="true" select-cell="cellSelected" show-scrollbar="true" stick-scrolling="true"/>
+    </vertical>
+</bg>
