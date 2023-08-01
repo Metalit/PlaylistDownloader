@@ -1,6 +1,17 @@
 #include "main.hpp"
 #include "customtypes/mainmenu.hpp"
 
+// #include "TMPro/TMP_Settings.hpp"
+// #include "TMPro/TMP_FontAsset.hpp"
+// #include "System/Collections/Generic/Dictionary_2.hpp"
+
+// bool HasChar(const char c) {
+//     auto asset = TMPro::TMP_Settings::get_defaultFontAsset();
+//     TMPro::TMP_Character* value;
+//     asset->get_characterLookupTable()->TryGetValue(c, byref(value));
+//     return value != nullptr;
+// }
+
 #include "questui/shared/QuestUI.hpp"
 
 static ModInfo modInfo;

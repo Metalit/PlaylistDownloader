@@ -18,14 +18,29 @@ void MainMenu::DidActivate(bool firstActivation, bool addedToHierarchy, bool scr
     viewControllersSeparator = -5;
     SetChildViewControllers({(HMUI::ViewController*)FilterMenu::GetInstance(), (HMUI::ViewController*)GetSubNavigationController()});
     GetSubNavigationController()->get_transform()->SetAsFirstSibling();
-    // GetSubNavigationController()->SetChildViewController((HMUI::ViewController*)PlaylistList::GetInstance());
-    GetSubNavigationController()->SetChildViewControllers({(HMUI::ViewController*)PlaylistList::GetInstance(), (HMUI::ViewController*)PlaylistDetail::GetInstance()});
+    GetSubNavigationController()->SetChildViewController((HMUI::ViewController*)PlaylistList::GetInstance());
+    instance = this;
 }
 
 HMUI::NavigationController* MainMenu::GetSubNavigationController() {
-    if (!instance) {
-        instance = QuestUI::BeatSaberUI::CreateViewController<HMUI::NavigationController*>();
-        instance->set_name("HorizontalNavigationController");
+    if (!subNavigationController) {
+        subNavigationController = QuestUI::BeatSaberUI::CreateViewController<HMUI::NavigationController*>();
+        subNavigationController->set_name("HorizontalNavigationController");
     }
-    return instance;
+    return subNavigationController;
+}
+
+void MainMenu::dtor() {
+    instance = nullptr;
+}
+
+void MainMenu::SetDetailShown(bool value) {
+    if (!instance)
+        return;
+    auto controller = instance->GetSubNavigationController();
+    int count = controller->viewControllers->get_Count();
+    if (value && count == 1)
+        controller->PushViewController((HMUI::ViewController*)PlaylistDetail::GetInstance(), nullptr, false);
+    else if (!value && count == 2)
+        controller->PopViewController(nullptr, true);
 }

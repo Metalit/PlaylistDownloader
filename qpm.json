@@ -5,6 +5,7 @@
     "name": "PlaylistDownloader",
     "id": "playlistdownloader",
     "version": "0.1.0",
+    "author": "Metalit",
     "url": null,
     "additionalData": {
       "overrideSoName": "libplaylistdownloader.so"
@@ -26,8 +27,8 @@
       "additionalData": {}
     },
     {
-      "id": "playlistcore",
-      "versionRange": "^1.2.0",
+      "id": "custom-types",
+      "versionRange": "^0.15.21",
       "additionalData": {}
     },
     {
@@ -37,29 +38,41 @@
     },
     {
       "id": "questui",
-      "versionRange": "^0.17.12",
+      "versionRange": "^0.17.11",
       "additionalData": {}
     },
     {
-      "id": "custom-types",
-      "versionRange": "^0.15.22",
-      "additionalData": {}
+      "id": "libcurl",
+      "versionRange": "*",
+      "additionalData": {
+        "private": true
+      }
     },
     {
-      "id": "rapidjson-macros",
+      "id": "config-utils",
       "versionRange": "^1.0.0",
-      "additionalData": {}
-    },
-    {
-      "id": "bsml",
-      "versionRange": "^0.3.1",
       "additionalData": {}
     },
     {
       "id": "paper",
       "versionRange": "=1.2.9",
       "additionalData": {}
+    },
+    {
+      "id": "songdownloader",
+      "versionRange": "^0.6.0",
+      "additionalData": {}
+    },
+    {
+      "id": "playlistcore",
+      "versionRange": "^1.2.0",
+      "additionalData": {}
+    },
+    {
+      "id": "bsml",
+      "versionRange": "^0.3.1",
+      "additionalData": {}
     }
   ],
-  "workspace": null
+  "additionalData": {}
 }

@@ -1,6 +1,6 @@
 <bg xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/RedBrumbler/Quest-BSML-Docs/gh-pages/schema.xsd">
-    <horizontal child-align="MiddleCenter" child-control-height="true">
-        <vertical horizontal-fit="PreferredSize" vertical-fit="PreferredSize" child-expand-width="true" child-control-height="false" spacing="-2">
+    <horizontal child-align="MiddleLeft" child-control-height="true" spacing="2" child-expand-width="false" child-control-width="false">
+        <vertical horizontal-fit="PreferredSize" vertical-fit="PreferredSize" child-expand-width="true" child-control-height="false">
             <horizontal child-control-width="true" child-expand-width="true">
                 <vertical pref-width="15" pref-height="15">
                     <image id="cover" preserve-aspect="false"/>
@@ -10,7 +10,7 @@
                     <text id="author" align="Left" word-wrapping="true" color="#FFFFFFBF"/>
                 </vertical>
             </horizontal>
-            <horizontal pref-width="63" pref-height="44" pad-left="-3">
+            <horizontal pref-width="63" pref-height="40" pad-left="-3">
                 <text-page id="description"/>
             </horizontal>
             <horizontal horizontal-fit="PreferredSize" spacing="2">
@@ -18,6 +18,9 @@
                 <button id="downloadSongs" text="Download + Songs" on-click="downloadSongsClicked" pref-height="10" pref-width="30"/>
             </horizontal>
         </vertical>
-        <list id="list" data="songData" pref-width="55" expand-cell="true" show-scrollbar="true" stick-scrolling="true"/>
+        <horizontal size-delta-x="65" child-expand-width="false" child-control-width="false" child-align="MiddleCenter">
+            <loading-indicator id="loadingIndicator" preserve-aspect="true" pref-width="10" pref-height="10"/>
+            <list id="list" data="songData" min-width="60" pref-width="60" expand-cell="true" show-scrollbar="true" stick-scrolling="true" active="false"/>
+        </horizontal>
     </horizontal>
 </bg>

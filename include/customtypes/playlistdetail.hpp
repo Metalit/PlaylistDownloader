@@ -3,8 +3,10 @@
 #include "custom-types/shared/macros.hpp"
 
 #include "HMUI/ViewController.hpp"
+#include "UnityEngine/GameObject.hpp"
 #include "HMUI/ImageView.hpp"
 #include "TMPro/TextMeshProUGUI.hpp"
+#include "HMUI/TextPageScrollView.hpp"
 #include "UnityEngine/UI/Button.hpp"
 #include "bsml/shared/BSML/Components/CustomListTableData.hpp"
 
@@ -18,11 +20,15 @@ DECLARE_CLASS_CODEGEN(PlaylistDownloader, PlaylistDetail, HMUI::ViewController,
     DECLARE_INSTANCE_METHOD(void, PostParse);
     DECLARE_DTOR(dtor);
     DECLARE_STATIC_METHOD(PlaylistDownloader::PlaylistDetail*, GetInstance);
+    DECLARE_INSTANCE_METHOD(void, Refresh);
+    DECLARE_INSTANCE_METHOD(void, UpdateScrollView);
+    DECLARE_INSTANCE_METHOD(void, SetLoading, bool value);
 
+    DECLARE_INSTANCE_FIELD(UnityEngine::GameObject*, loadingIndicator);
     DECLARE_INSTANCE_FIELD(HMUI::ImageView*, cover);
     DECLARE_INSTANCE_FIELD(TMPro::TextMeshProUGUI*, name);
     DECLARE_INSTANCE_FIELD(TMPro::TextMeshProUGUI*, author);
-    DECLARE_INSTANCE_FIELD(TMPro::TextMeshProUGUI*, description);
+    DECLARE_INSTANCE_FIELD(HMUI::TextPageScrollView*, description);
     DECLARE_INSTANCE_FIELD(UnityEngine::UI::Button*, download);
     DECLARE_INSTANCE_FIELD(UnityEngine::UI::Button*, downloadSongs);
     DECLARE_INSTANCE_FIELD(BSML::CustomListTableData*, list);

@@ -1,4 +1,5 @@
 #include "main.hpp"
+#include "manager.hpp"
 #include "customtypes/filtermenu.hpp"
 #include "assets.hpp"
 
@@ -40,6 +41,7 @@ void FilterMenu::PostParse() {
     sourceIconControl->iconSize = 6;
     sourceIconControl->padding = 2;
     sourceIconControl->ReloadData();
+    Manager::SetSource(sourceIconControl->get_selectedCellNumber());
 }
 
 void FilterMenu::dtor() {
@@ -54,8 +56,14 @@ FilterMenu* FilterMenu::GetInstance() {
 
 void FilterMenu::sourceSelected(HMUI::SegmentedControl* control, int cell) {
     getLogger().info("Source %i selected", cell);
+    Manager::SetSource(cell);
 }
 
 void FilterMenu::stringInput(StringW value) {
     getLogger().info("String %s input", value.operator std::string().c_str());
+    Manager::SetSearch(value);
+}
+
+void FilterMenu::filterClicked() {
+    getLogger().info("Filter button clicked");
 }
