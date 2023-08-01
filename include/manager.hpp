@@ -23,6 +23,7 @@ namespace Manager {
 
     void SelectPlaylist(int playlistIdx);
     Playlist* GetSelectedPlaylist();
+    bool SelectedPlaylistOwned();
 
     void GetPlaylistCover(Playlist* playlist, std::function<void(UnityEngine::Sprite*)> callback);
     void GetPlaylistSongs(Playlist* playlist, std::function<void(std::vector<std::optional<BeatSaver::Beatmap>>)> callback);

@@ -13,6 +13,7 @@ DECLARE_CLASS_CODEGEN(PlaylistDownloader, MainMenu, HMUI::NavigationController,
     DECLARE_DTOR(dtor);
 
     DECLARE_STATIC_METHOD(void, SetDetailShown, bool value);
+    DECLARE_INSTANCE_FIELD_PRIVATE(bool, detailShown);
 
     private:
     HMUI::NavigationController* subNavigationController;

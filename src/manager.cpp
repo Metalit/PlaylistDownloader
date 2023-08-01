@@ -8,6 +8,7 @@
 
 #include "questui/shared/BeatSaberUI.hpp"
 #include "questui/shared/CustomTypes/Components/MainThreadScheduler.hpp"
+#include "playlistcore/shared/PlaylistCore.hpp"
 
 using namespace PlaylistDownloader;
 
@@ -205,6 +206,19 @@ namespace Manager {
             return nullptr;
         return playlists[selectedPlaylist].get();
     }
+    bool SelectedPlaylistOwned() {
+        auto playlist = GetSelectedPlaylist();
+        if (!playlist)
+            return false;
+
+        auto allLists = PlaylistCore::GetLoadedPlaylists();
+        for (auto& loaded : allLists) {
+            auto& cdata = loaded->playlistJSON.CustomData;
+            if (cdata.has_value() && cdata->SyncURL == playlist->PlaylistURL())
+                return true;
+        }
+        return false;
+    }
 
     void GetPlaylistCover(Playlist* playlist, std::function<void(UnityEngine::Sprite*)> callback) {
         getLogger().debug("Getting playlist cover %s", playlist->Title().c_str());
@@ -267,6 +281,11 @@ namespace Manager {
                 PlaylistCore::BPList list;
                 try {
                     ReadFromString(data, list);
+                    if (!list.CustomData.has_value())
+                        list.CustomData.emplace();
+                    auto& syncUrl = list.CustomData->SyncURL;
+                    if (!syncUrl.has_value() || syncUrl->empty())
+                        syncUrl = url;
                 } catch (const JSONException& exc) {
                     getLogger().error("Failed to deserialize playlist %s: %s", data.c_str(), exc.what());
                     return;

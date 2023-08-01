@@ -4,6 +4,9 @@
 
 #include "questui/shared/BeatSaberUI.hpp"
 
+#include "playlistcore/shared/PlaylistCore.hpp"
+#include "songloader/shared/API.hpp"
+
 DEFINE_TYPE(PlaylistDownloader, PlaylistDetail);
 
 using namespace PlaylistDownloader;
@@ -32,6 +35,8 @@ void PlaylistDetail::SetupBSMLFields() {
 void PlaylistDetail::PostParse() {
     list->tableView->set_selectionType(HMUI::TableViewSelectionType::None);
     Refresh();
+    downloadProgress = QuestUI::BeatSaberUI::CreateProgressBar({-1.4, 3.1, 4}, "Downloading Songs...", "0 / 0", "PlaylistDownloader");
+    downloadProgress->get_gameObject()->SetActive(false);
 }
 
 void PlaylistDetail::dtor() {
@@ -61,6 +66,10 @@ void PlaylistDetail::Refresh() {
     author->SetText(std::string("<line-height=75%>") + playlist->Author());
     description->SetText(playlist->Description());
     description->ScrollTo(0, false);
+
+    bool owned = Manager::SelectedPlaylistOwned();
+    download->set_interactable(!owned);
+    downloadSongs->set_interactable(!owned);
 
     songData->Clear();
     SetLoading(true);
@@ -102,4 +111,42 @@ void PlaylistDetail::SetLoading(bool value) {
         return;
     list->get_gameObject()->SetActive(!value);
     loadingIndicator->SetActive(value);
+}
+
+void PlaylistDetail::downloadClicked() {
+    auto playlist = Manager::GetSelectedPlaylist();
+    if (!playlist)
+        return;
+
+    download->set_interactable(false);
+    downloadSongs->set_interactable(false);
+
+    Manager::GetPlaylistFile(playlist, [](PlaylistCore::BPList file) {
+        PlaylistCore::AddPlaylist(file);
+    });
+}
+
+void PlaylistDetail::downloadSongsClicked() {
+    auto playlist = Manager::GetSelectedPlaylist();
+    if (!playlist)
+        return;
+
+    download->set_interactable(false);
+    downloadSongs->set_interactable(false);
+
+    Manager::GetPlaylistFile(playlist, [this](PlaylistCore::BPList file) {
+        auto [_, playlist] = PlaylistCore::AddPlaylist(file);
+
+        downloadProgress->subText1->SetText("0 / 0");
+        downloadProgress->SetProgress(0);
+
+        PlaylistCore::DownloadMissingSongsFromPlaylist(playlist, [this]() {
+            RuntimeSongLoader::API::RefreshSongs(false);
+            downloadProgress->get_gameObject()->SetActive(false);
+        },
+        [this](int progress, int total) {
+            downloadProgress->subText1->SetText(std::to_string(progress) + " / " + std::to_string(total));
+            downloadProgress->SetProgress(progress / (float) total);
+        });
+    });
 }

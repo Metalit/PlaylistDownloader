@@ -13,13 +13,18 @@ using namespace PlaylistDownloader;
 #include "GlobalNamespace/SelectLevelCategoryViewController.hpp"
 
 void MainMenu::DidActivate(bool firstActivation, bool addedToHierarchy, bool screenSystemEnabling) {
-    set_name("PlaylistDownloaderMenu");
-    orientation = Orientation::Vertical;
-    viewControllersSeparator = -5;
+    instance = this;
+    if (firstActivation) {
+        set_name("PlaylistDownloaderMenu");
+        orientation = Orientation::Vertical;
+        viewControllersSeparator = -5;
+    }
     SetChildViewControllers({(HMUI::ViewController*)FilterMenu::GetInstance(), (HMUI::ViewController*)GetSubNavigationController()});
     GetSubNavigationController()->get_transform()->SetAsFirstSibling();
-    GetSubNavigationController()->SetChildViewController((HMUI::ViewController*)PlaylistList::GetInstance());
-    instance = this;
+    if (detailShown)
+        GetSubNavigationController()->SetChildViewControllers({(HMUI::ViewController*)PlaylistList::GetInstance(), (HMUI::ViewController*)PlaylistDetail::GetInstance()});
+    else
+        GetSubNavigationController()->SetChildViewController((HMUI::ViewController*)PlaylistList::GetInstance());
 }
 
 HMUI::NavigationController* MainMenu::GetSubNavigationController() {
@@ -37,6 +42,7 @@ void MainMenu::dtor() {
 void MainMenu::SetDetailShown(bool value) {
     if (!instance)
         return;
+    instance->detailShown = value;
     auto controller = instance->GetSubNavigationController();
     int count = controller->viewControllers->get_Count();
     if (value && count == 1)
