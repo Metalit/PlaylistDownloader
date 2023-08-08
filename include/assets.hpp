@@ -34,6 +34,7 @@ QuestUI::BeatSaberUI::ArrayToSprite(static_cast<ArrayW<uint8_t>>(IncludedAssets:
 
 namespace IncludedAssets {
 	DECLARE_FILE(AccSaber_png)
+	DECLARE_FILE(BeatLeader_png)
 	DECLARE_FILE(BeatSaver_png)
 	DECLARE_FILE(Hitbloq_png)
 	DECLARE_FILE(filtermenu_bsml)

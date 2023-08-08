@@ -113,6 +113,7 @@ namespace Manager {
     int source = -1;
     int page = 0;
     int receivedPages = 0;
+    bool done = false;
     std::string search = "";
 
     std::vector<std::unique_ptr<Playlist>> playlists = {};
@@ -127,6 +128,7 @@ namespace Manager {
             return;
         search = value;
         page = receivedPages = 0;
+        done = false;
         playlists.clear();
         RequestMorePlaylists();
         PlaylistList::GetInstance()->SetLoading(true);
@@ -138,21 +140,23 @@ namespace Manager {
             return;
         source = newSource;
         page = receivedPages = 0;
+        done = false;
         playlists.clear();
         RequestMorePlaylists();
         PlaylistList::GetInstance()->SetLoading(true);
         MainMenu::SetDetailShown(false);
     }
     void RequestMorePlaylists() {
-        if (page > receivedPages)
+        if (page > receivedPages || done)
             return;
+        bool firstRequest = page == 0;
         getLogger().info("Requesting playlists from %i search %s", source, search.c_str());
-        auto callback = [pastState = GetState()](std::vector<std::unique_ptr<Playlist>> newPlaylists) mutable {
+        auto callback = [pastState = GetState(), firstRequest](std::vector<std::unique_ptr<Playlist>> newPlaylists) mutable {
 
             using capture_fix = dumb_function_copyable<std::vector<std::unique_ptr<Playlist>>>;
             auto arg = capture_fix(std::move(newPlaylists));
 
-            QuestUI::MainThreadScheduler::Schedule([pastState, arg]() mutable {
+            QuestUI::MainThreadScheduler::Schedule([pastState, firstRequest, arg]() mutable {
                 if (pastState != GetState())
                     return;
                 if (!arg.get().empty()) {
@@ -160,10 +164,13 @@ namespace Manager {
                         std::make_move_iterator(arg.get().begin()),
                         std::make_move_iterator(arg.get().end())
                     );
-                }
+                } else
+                    done = true;
                 receivedPages++;
-                PlaylistList::GetInstance()->SetLoading(false);
-                PlaylistList::GetInstance()->Refresh();
+                if (!done) {
+                    PlaylistList::GetInstance()->SetLoading(false);
+                    PlaylistList::GetInstance()->Refresh(firstRequest);
+                }
             });
         };
         switch (source) {
@@ -175,6 +182,9 @@ namespace Manager {
                 break;
             case 2:
                 GetAccSaberPlaylists(callback, page, search);
+                break;
+            case 3:
+                GetBeatLeaderPlaylists(callback, page, search);
                 break;
         }
         page++;

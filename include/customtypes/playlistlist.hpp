@@ -16,7 +16,7 @@ DECLARE_CLASS_CODEGEN(PlaylistDownloader, PlaylistList, HMUI::ViewController,
     DECLARE_INSTANCE_METHOD(void, PostParse);
     DECLARE_DTOR(dtor);
     DECLARE_STATIC_METHOD(PlaylistDownloader::PlaylistList*, GetInstance);
-    DECLARE_INSTANCE_METHOD(void, Refresh);
+    DECLARE_INSTANCE_METHOD(void, Refresh, bool full);
     DECLARE_INSTANCE_METHOD(void, UpdateScrollView);
     DECLARE_INSTANCE_METHOD(void, SetLoading, bool value);
 

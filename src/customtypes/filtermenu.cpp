@@ -31,6 +31,7 @@ void FilterMenu::SetupBSMLFields() {
     sourceIconData->Add(Item::New_ctor(PNG_SPRITE(BeatSaver), "BeatSaver"));
     sourceIconData->Add(Item::New_ctor(PNG_SPRITE(Hitbloq), "Hitbloq"));
     sourceIconData->Add(Item::New_ctor(PNG_SPRITE(AccSaber), "AccSaber"));
+    sourceIconData->Add(Item::New_ctor(PNG_SPRITE(BeatLeader), "BeatLeader"));
 }
 
 void FilterMenu::PostParse() {

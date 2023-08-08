@@ -55,20 +55,24 @@ PlaylistList* PlaylistList::GetInstance() {
     return instance;
 }
 
-void PlaylistList::Refresh() {
+void PlaylistList::Refresh(bool full) {
     getLogger().debug("Refreshing playlist list");
+    if (full)
+        playlistData->Clear();
+
+    int currentPos = playlistData->get_Count();
+
     auto playlists = Manager::GetPlaylists();
     auto state = Manager::GetState();
 
-    playlistData->Clear();
-    for (auto& playlist : playlists)
-        playlistData->Add(BSML::CustomCellInfo::construct(playlist->Title(), playlist->Author()));
+    for (int i = currentPos; i < playlists.size(); i++)
+        playlistData->Add(BSML::CustomCellInfo::construct(playlists[i]->Title(), playlists[i]->Author()));
 
     auto pos = list->tableView->contentTransform->get_anchoredPosition().y;
     list->tableView->ReloadData();
     list->tableView->scrollView->ScrollTo(std::min(pos, list->tableView->cellSize * list->NumberOfCells()), false);
 
-    for (int i = 0; i < playlists.size(); i++) {
+    for (int i = currentPos; i < playlists.size(); i++) {
         Manager::GetPlaylistCover(playlists[i], [this, i, state](UnityEngine::Sprite* cover) {
             if (state != Manager::GetState())
                 return;
