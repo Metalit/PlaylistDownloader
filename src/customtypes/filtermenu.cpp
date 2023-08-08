@@ -1,10 +1,10 @@
 #include "main.hpp"
 #include "manager.hpp"
-#include "customtypes/filtermenu.hpp"
 #include "assets.hpp"
+#include "customtypes/filtermenu.hpp"
 
-#include "questui/shared/BeatSaberUI.hpp"
 #include "bsml/shared/BSML.hpp"
+#include "questui/shared/BeatSaberUI.hpp"
 
 DEFINE_TYPE(PlaylistDownloader, FilterMenu);
 
@@ -20,8 +20,8 @@ void FilterMenu::OnEnable() {
 void FilterMenu::DidActivate(bool firstActivation, bool addedToHierarchy, bool screenSystemEnabling) {
     if (firstActivation) {
         SetupBSMLFields();
-        AddHotReload(this, "filtermenu");
-        // BSML::parse_and_construct(IncludedAssets::filtermenu_bsml, get_transform(), this);
+        // AddHotReload(this, "filtermenu");
+        BSML::parse_and_construct(IncludedAssets::filtermenu_bsml, get_transform(), this);
     }
 }
 

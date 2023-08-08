@@ -1,7 +1,9 @@
 #include "main.hpp"
 #include "manager.hpp"
+#include "assets.hpp"
 #include "customtypes/playlistdetail.hpp"
 
+#include "bsml/shared/BSML.hpp"
 #include "questui/shared/BeatSaberUI.hpp"
 
 #include "playlistcore/shared/PlaylistCore.hpp"
@@ -22,8 +24,8 @@ void PlaylistDetail::OnEnable() {
 void PlaylistDetail::DidActivate(bool firstActivation, bool addedToHierarchy, bool screenSystemEnabling) {
     if (firstActivation) {
         SetupBSMLFields();
-        AddHotReload(this, "playlistdetail");
-        // BSML::parse_and_construct(IncludedAssets::playlistdetail_bsml, get_transform(), this);
+        // AddHotReload(this, "playlistdetail");
+        BSML::parse_and_construct(IncludedAssets::playlistdetail_bsml, get_transform(), this);
     }
     UpdateScrollView();
 }
