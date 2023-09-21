@@ -5,4 +5,11 @@
         </vertical>
         <icon-button id="filterButton" horizontal-fit="PreferredSize" vertical-fit="PreferredSize" pref-width="9" pref-height="9" on-click="filterClicked" icon="#FilterIcon"/>
     </horizontal>
+    <modal click-off-closes="true" id="filterModal" size-delta-x="60" size-delta-y="27" anchor-pos-y="-10">
+        <vertical child-control-width="true" pref-width="55">
+            <toggle-setting id="curatedToggle" text="Curated" on-change="curatedToggled"/>
+            <toggle-setting id="includeEmptyToggle" text="Include Empty" on-change="includeEmptyToggled"/>
+            <list-setting id="sortEnum" text="Sort Order" choices="sorts" on-change="sortPicked"/>
+        </vertical>
+    </modal>
 </bg>

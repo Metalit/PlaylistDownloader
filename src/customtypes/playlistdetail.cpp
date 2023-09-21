@@ -41,7 +41,8 @@ void PlaylistDetail::PostParse() {
     downloadProgress->get_gameObject()->SetActive(false);
 }
 
-void PlaylistDetail::dtor() {
+void PlaylistDetail::OnDestroy() {
+    Manager::Invalidate();
     instance = nullptr;
 }
 
@@ -77,7 +78,7 @@ void PlaylistDetail::Refresh() {
     SetLoading(true);
 
     Manager::GetPlaylistSongs(playlist, [this, playlist](std::vector<std::optional<BeatSaver::Beatmap>> songs) {
-        if (playlist != Manager::GetSelectedPlaylist())
+        if (playlist != Manager::GetSelectedPlaylist() || this != PlaylistDetail::instance)
             return;
 
         for (auto& song : songs) {
@@ -137,16 +138,22 @@ void PlaylistDetail::downloadSongsClicked() {
     downloadSongs->set_interactable(false);
 
     Manager::GetPlaylistFile(playlist, [this](PlaylistCore::BPList file) {
+        if (this != PlaylistDetail::instance)
+            return;
         auto [_, playlist] = PlaylistCore::AddPlaylist(file);
 
         downloadProgress->subText1->SetText("0 / 0");
         downloadProgress->SetProgress(0);
 
         PlaylistCore::DownloadMissingSongsFromPlaylist(playlist, [this]() {
+            if (this != PlaylistDetail::instance)
+                return;
             RuntimeSongLoader::API::RefreshSongs(false);
             downloadProgress->get_gameObject()->SetActive(false);
         },
         [this](int progress, int total) {
+            if (this != PlaylistDetail::instance)
+                return;
             downloadProgress->subText1->SetText(std::to_string(progress) + " / " + std::to_string(total));
             downloadProgress->SetProgress(progress / (float) total);
         });

@@ -14,7 +14,7 @@ DECLARE_CLASS_CODEGEN(PlaylistDownloader, PlaylistList, HMUI::ViewController,
     DECLARE_OVERRIDE_METHOD(void, DidActivate, METHOD(HMUI::ViewController::DidActivate), bool firstActivation, bool addedToHierarchy, bool screenSystemEnabling);
     DECLARE_INSTANCE_METHOD(void, SetupBSMLFields);
     DECLARE_INSTANCE_METHOD(void, PostParse);
-    DECLARE_DTOR(dtor);
+    DECLARE_INSTANCE_METHOD(void, OnDestroy);
     DECLARE_STATIC_METHOD(PlaylistDownloader::PlaylistList*, GetInstance);
     DECLARE_INSTANCE_METHOD(void, Refresh, bool full);
     DECLARE_INSTANCE_METHOD(void, UpdateScrollView);

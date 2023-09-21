@@ -1,4 +1,5 @@
 #include "main.hpp"
+#include "config.hpp"
 #include "apis.hpp"
 #include "webutil.hpp"
 
@@ -8,8 +9,9 @@
 #include "jsontypes/hitbloq.hpp"
 
 inline std::string lower(std::string str) {
-    std::transform(str.begin(), str.end(), str.begin(), tolower);
-    return str;
+    std::string ret = str;
+    std::transform(str.begin(), str.end(), ret.begin(), tolower);
+    return ret;
 }
 
 void GetAccSaberPlaylists(std::function<void(std::vector<std::unique_ptr<Playlist>> playlists)> callback, int page, std::string search) {
@@ -33,7 +35,10 @@ void GetAccSaberPlaylists(std::function<void(std::vector<std::unique_ptr<Playlis
 
 void GetBeatSaverPlaylists(std::function<void(std::vector<std::unique_ptr<Playlist>> playlists)> callback, int page, std::string search) {
     std::string url = "https://api.beatsaver.com/playlists/search/";
-    url += std::to_string(page) + "?sortOrder=Latest";
+    url += std::to_string(page);
+    url += std::string("?curated=") + (getConfig().curated.GetValue() ? "true" : "false");
+    url += std::string("&includeEmpty=") + (getConfig().includeEmpty.GetValue() ? "true" : "false");
+    url += "&sortOrder=" + getConfig().sort.GetValue();
     if (!search.empty())
         url += "&q=" + search;
     WebUtils::GetAsync(url, [callback](long httpCode, std::string data) {

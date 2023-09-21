@@ -47,7 +47,8 @@ void PlaylistList::PostParse() {
     list->tableView->scrollView->add_scrollPositionChangedEvent(delegate);
 }
 
-void PlaylistList::dtor() {
+void PlaylistList::OnDestroy() {
+    Manager::Invalidate();
     instance = nullptr;
 }
 
@@ -58,6 +59,8 @@ PlaylistList* PlaylistList::GetInstance() {
 }
 
 void PlaylistList::Refresh(bool full) {
+    if (!list || !playlistData)
+        return;
     getLogger().debug("Refreshing playlist list");
     if (full)
         playlistData->Clear();
@@ -76,7 +79,7 @@ void PlaylistList::Refresh(bool full) {
 
     for (int i = currentPos; i < playlists.size(); i++) {
         Manager::GetPlaylistCover(playlists[i], [this, i, state](UnityEngine::Sprite* cover) {
-            if (state != Manager::GetState())
+            if (state != Manager::GetState() || this != PlaylistList::instance)
                 return;
 
             playlistData->get_Item(i)->icon = cover;

@@ -1,3 +1,4 @@
+#include "config.hpp"
 #include "main.hpp"
 #include "manager.hpp"
 #include "webutil.hpp"
@@ -9,6 +10,7 @@
 #include "questui/shared/BeatSaberUI.hpp"
 #include "questui/shared/CustomTypes/Components/MainThreadScheduler.hpp"
 #include "playlistcore/shared/PlaylistCore.hpp"
+#include <string>
 
 using namespace PlaylistDownloader;
 
@@ -122,11 +124,8 @@ namespace Manager {
     cache<std::string, UnityEngine::Sprite*, 20> cachedPlaylistCovers = {};
     cache<std::string, PlaylistCore::BPList, 100> cachedPlaylists = {};
 
-    void SetSearch(std::string value) {
-        getLogger().debug("Searching %s", value.c_str());
-        if (value == search)
-            return;
-        search = value;
+    void Refresh() {
+        getLogger().debug("Refreshing playlists");
         page = receivedPages = 0;
         done = false;
         playlists.clear();
@@ -134,17 +133,28 @@ namespace Manager {
         PlaylistList::GetInstance()->SetLoading(true);
         MainMenu::SetDetailShown(false);
     }
+
+    void Invalidate() {
+        playlists.clear();
+        while (cachedPlaylistCovers.size() > 0)
+            cachedPlaylistCovers.drop();
+        while (cachedPlaylists.size() > 0)
+            cachedPlaylists.drop();
+    }
+
+    void SetSearch(std::string value) {
+        getLogger().debug("Searching %s", value.c_str());
+        if (value == search)
+            return;
+        search = value;
+        Refresh();
+    }
     void SetSource(int newSource) {
         getLogger().debug("Source set to %i", newSource);
         if (newSource == source)
             return;
         source = newSource;
-        page = receivedPages = 0;
-        done = false;
-        playlists.clear();
-        RequestMorePlaylists();
-        PlaylistList::GetInstance()->SetLoading(true);
-        MainMenu::SetDetailShown(false);
+        Refresh();
     }
     void RequestMorePlaylists() {
         if (page > receivedPages || done)
@@ -191,9 +201,16 @@ namespace Manager {
     }
 
     State GetState() {
+        // no change to state if filters are changed on a source that doesn't use them
+        bool curated = SourceHasFilters(source) ? getConfig().curated.GetValue() : false;
+        bool includeEmpty = SourceHasFilters(source) ? getConfig().includeEmpty.GetValue() : false;
+        std::string sort = SourceHasFilters(source) ? getConfig().sort.GetValue() : "";
         return State{
             .source = source,
             .search = search,
+            .curated = curated,
+            .includeEmpty = includeEmpty,
+            .sort = sort,
         };
     }
     std::vector<Playlist*> GetPlaylists() {

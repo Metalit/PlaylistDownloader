@@ -11,8 +11,14 @@ namespace Manager {
     struct State {
         int source;
         std::string search;
+        bool curated;
+        bool includeEmpty;
+        std::string sort;
         bool operator==(const State& other) const = default;
     };
+
+    void Refresh();
+    void Invalidate();
 
     void SetSearch(std::string value);
     void SetSource(int source);

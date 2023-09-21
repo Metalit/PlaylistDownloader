@@ -1,4 +1,5 @@
 #include "main.hpp"
+#include "manager.hpp"
 #include "customtypes/mainmenu.hpp"
 #include "customtypes/filtermenu.hpp"
 #include "customtypes/playlistlist.hpp"
@@ -9,8 +10,6 @@
 DEFINE_TYPE(PlaylistDownloader, MainMenu);
 
 using namespace PlaylistDownloader;
-
-#include "GlobalNamespace/SelectLevelCategoryViewController.hpp"
 
 void MainMenu::DidActivate(bool firstActivation, bool addedToHierarchy, bool screenSystemEnabling) {
     instance = this;
@@ -35,7 +34,8 @@ HMUI::NavigationController* MainMenu::GetSubNavigationController() {
     return subNavigationController;
 }
 
-void MainMenu::dtor() {
+void MainMenu::OnDestroy() {
+    Manager::Invalidate();
     instance = nullptr;
 }
 
@@ -44,6 +44,8 @@ void MainMenu::SetDetailShown(bool value) {
         return;
     instance->detailShown = value;
     auto controller = instance->GetSubNavigationController();
+    if (!controller->get_isInViewControllerHierarchy())
+        return;
     int count = controller->viewControllers->get_Count();
     if (value && count == 1)
         controller->PushViewController((HMUI::ViewController*)PlaylistDetail::GetInstance(), nullptr, false);

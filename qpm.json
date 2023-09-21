@@ -5,7 +5,6 @@
     "name": "PlaylistDownloader",
     "id": "playlistdownloader",
     "version": "0.1.0",
-    "author": "Metalit",
     "url": null,
     "additionalData": {
       "overrideSoName": "libplaylistdownloader.so"
@@ -55,7 +54,7 @@
     },
     {
       "id": "paper",
-      "versionRange": "=1.2.9",
+      "versionRange": "^1.2.9",
       "additionalData": {}
     },
     {
@@ -65,14 +64,24 @@
     },
     {
       "id": "playlistcore",
-      "versionRange": "^1.2.0",
+      "versionRange": "^1.2.1",
       "additionalData": {}
     },
     {
       "id": "bsml",
       "versionRange": "^0.3.1",
       "additionalData": {}
+    },
+    {
+      "id": "songloader",
+      "versionRange": "^0.10.17",
+      "additionalData": {}
+    },
+    {
+      "id": "config-utils",
+      "versionRange": "^1.1.0",
+      "additionalData": {}
     }
   ],
-  "additionalData": {}
+  "workspace": null
 }

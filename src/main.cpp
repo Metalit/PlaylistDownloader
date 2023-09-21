@@ -1,4 +1,5 @@
 #include "main.hpp"
+#include "config.hpp"
 #include "customtypes/mainmenu.hpp"
 
 // #include "TMPro/TMP_Settings.hpp"
@@ -25,6 +26,8 @@ extern "C" void setup(ModInfo& info) {
     info.id = MOD_ID;
     info.version = VERSION;
     modInfo = info;
+
+    getConfig().Init(info);
 
     getLogger().info("Completed setup!");
 }
