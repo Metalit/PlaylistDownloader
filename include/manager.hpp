@@ -29,10 +29,13 @@ namespace Manager {
 
     void SelectPlaylist(int playlistIdx);
     Playlist* GetSelectedPlaylist();
-    bool SelectedPlaylistOwned();
+
+    void RequestMoreSongs();
+    std::vector<BeatSaver::Beatmap*> GetSongs();
 
     void GetPlaylistCover(Playlist* playlist, std::function<void(UnityEngine::Sprite*)> callback);
-    void GetPlaylistSongs(Playlist* playlist, std::function<void(std::vector<std::optional<BeatSaver::Beatmap>>)> callback);
     void GetSongCover(BeatSaver::Beatmap* song, std::function<void(UnityEngine::Sprite*)> callback);
+
+    bool SelectedPlaylistOwned();
     void GetPlaylistFile(Playlist* playlist, std::function<void(PlaylistCore::BPList)> callback);
 };

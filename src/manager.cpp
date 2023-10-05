@@ -15,6 +15,7 @@
 using namespace PlaylistDownloader;
 
 #define FILE_DOWNLOAD_TIMEOUT 64
+#define PLAYLIST_SONGS_PAGE_SIZE 10
 
 // https://gist.github.com/jagt/5797948
 template<class K, class V, int MaxSize = -1>
@@ -121,6 +122,12 @@ namespace Manager {
     std::vector<std::unique_ptr<Playlist>> playlists = {};
     int selectedPlaylist = -1;
 
+    int songsPage = 0;
+    int receivedSongsPages = 0;
+    bool songsDone = false;
+
+    std::vector<std::optional<BeatSaver::Beatmap>> songs = {};
+
     cache<std::string, UnityEngine::Sprite*, 20> cachedPlaylistCovers = {};
     cache<std::string, PlaylistCore::BPList, 100> cachedPlaylists = {};
 
@@ -129,11 +136,20 @@ namespace Manager {
         page = receivedPages = 0;
         done = false;
         playlists.clear();
-        RequestMorePlaylists();
-        PlaylistList::GetInstance()->SetLoading(true);
         MainMenu::SetDetailShown(false);
+        PlaylistList::GetInstance()->SetLoading(true);
+        RequestMorePlaylists();
     }
-
+    void RefreshSelected() {
+        getLogger().debug("Refreshing playlist selection");
+        songsPage = receivedSongsPages = 0;
+        songsDone = false;
+        songs.clear();
+        MainMenu::SetDetailShown(GetSelectedPlaylist() != nullptr);
+        PlaylistDetail::GetInstance()->SetLoading(true);
+        PlaylistDetail::GetInstance()->Refresh(true);
+        RequestMoreSongs();
+    }
     void Invalidate() {
         playlists.clear();
         while (cachedPlaylistCovers.size() > 0)
@@ -224,27 +240,73 @@ namespace Manager {
     }
 
     void SelectPlaylist(int playlistIdx) {
+        getLogger().debug("Playlist set to %i", playlistIdx);
         selectedPlaylist = playlistIdx;
-        MainMenu::SetDetailShown(true);
-        PlaylistDetail::GetInstance()->Refresh();
+        RefreshSelected();
     }
     Playlist* GetSelectedPlaylist() {
         if (selectedPlaylist < 0 || selectedPlaylist > playlists.size())
             return nullptr;
         return playlists[selectedPlaylist].get();
     }
-    bool SelectedPlaylistOwned() {
-        auto playlist = GetSelectedPlaylist();
-        if (!playlist)
-            return false;
 
-        auto allLists = PlaylistCore::GetLoadedPlaylists();
-        for (auto& loaded : allLists) {
-            auto& cdata = loaded->playlistJSON.CustomData;
-            if (cdata.has_value() && cdata->SyncURL == playlist->PlaylistURL())
-                return true;
+    void RequestMoreSongs() {
+        auto playlist = GetSelectedPlaylist();
+        if (!playlist || songsPage > receivedSongsPages || songsDone)
+            return;
+        getLogger().debug("Getting playlist songs %s page %i", playlist->Title().c_str(), songsPage);
+        auto callback = [currentPage = songsPage, playlist](PlaylistCore::BPList downloaded) {
+            if (playlist != GetSelectedPlaylist())
+                return;
+            auto& bpSongs = downloaded.Songs;
+            int start = PLAYLIST_SONGS_PAGE_SIZE * currentPage;
+            int end = PLAYLIST_SONGS_PAGE_SIZE * (currentPage + 1);
+            end = std::min(end, (int) bpSongs.size());
+            int count = end - start;
+            if (count <= 0) {
+                receivedSongsPages++;
+                songsDone = true;
+                return;
+            }
+            auto foundCount = new std::atomic_int(0);
+            auto foundMaps = new std::vector<std::optional<BeatSaver::Beatmap>>(count);
+            for (int i = start; i < end; i++) {
+                getLogger().debug("Getting playlist song %i / %li", i, bpSongs.size());
+                BeatSaver::API::GetBeatmapByHashAsync(bpSongs[i].Hash, [foundCount, foundMaps, i, count, start, playlist](std::optional<BeatSaver::Beatmap> map) {
+                    foundMaps->at(i - start) = map;
+                    int newCount = foundCount->fetch_add(1) + 1;
+                    if (map.has_value())
+                        getLogger().debug("Got playlist song %i total %i / %i", i, newCount, count);
+                    else
+                        getLogger().debug("Failed to get playlist song %i total %i / %i", i, newCount, count);
+                    if (newCount == count) {
+                        if (playlist == GetSelectedPlaylist()) {
+                            QuestUI::MainThreadScheduler::Schedule([maps = *foundMaps]() {
+                                for (auto& map : maps)
+                                    songs.push_back(map);
+                                receivedSongsPages++;
+                                PlaylistDetail::GetInstance()->SetLoading(false);
+                                PlaylistDetail::GetInstance()->Refresh(false);
+                            });
+                        }
+                        delete foundCount;
+                        delete foundMaps;
+                    }
+                });
+            }
+        };
+        GetPlaylistFile(playlist, callback);
+        songsPage++;
+    }
+    std::vector<BeatSaver::Beatmap*> GetSongs() {
+        std::vector<BeatSaver::Beatmap*> ret = {};
+        ret.reserve(songs.size());
+
+        for (auto& song : songs) {
+            if (song.has_value())
+                ret.push_back(&*song);
         }
-        return false;
+        return ret;
     }
 
     void GetPlaylistCover(Playlist* playlist, std::function<void(UnityEngine::Sprite*)> callback) {
@@ -262,31 +324,6 @@ namespace Manager {
             });
         });
     }
-    void GetPlaylistSongs(Playlist* playlist, std::function<void(std::vector<std::optional<BeatSaver::Beatmap>>)> callback) {
-        getLogger().debug("Getting playlist songs %s", playlist->Title().c_str());
-        auto playlistCallback = [callback](PlaylistCore::BPList downloaded) {
-            auto& songs = downloaded.Songs;
-            int count = songs.size();
-            auto foundCount = new std::atomic_int(0);
-            auto foundMaps = new std::vector<std::optional<BeatSaver::Beatmap>>(count);
-            for (int i = 0; i < count; i++) {
-                getLogger().debug("Getting playlist song %i / %i", i, count);
-                BeatSaver::API::GetBeatmapByHashAsync(songs[i].Hash, [foundCount, foundMaps, i, count, callback](std::optional<BeatSaver::Beatmap> map) {
-                    foundMaps->at(i) = map;
-                    int newCount = foundCount->fetch_add(1) + 1;
-                    getLogger().debug("Got playlist song %i total %i / %i", i, newCount, count);
-                    if (newCount == count) {
-                        QuestUI::MainThreadScheduler::Schedule([maps = *foundMaps, callback]() {
-                            callback(maps);
-                        });
-                        delete foundCount;
-                        delete foundMaps;
-                    }
-                });
-            }
-        };
-        GetPlaylistFile(playlist, playlistCallback);
-    }
     void GetSongCover(BeatSaver::Beatmap* song, std::function<void(UnityEngine::Sprite*)> callback) {
         getLogger().debug("Getting song cover %s", song->GetName().c_str());
         song->GetLatestCoverImageAsync([callback](std::vector<uint8_t> bytes) {
@@ -295,6 +332,20 @@ namespace Manager {
                 callback(sprite);
             });
         }, nullptr);
+    }
+
+    bool SelectedPlaylistOwned() {
+        auto playlist = GetSelectedPlaylist();
+        if (!playlist)
+            return false;
+
+        auto allLists = PlaylistCore::GetLoadedPlaylists();
+        for (auto& loaded : allLists) {
+            auto& cdata = loaded->playlistJSON.CustomData;
+            if (cdata.has_value() && cdata->SyncURL == playlist->PlaylistURL())
+                return true;
+        }
+        return false;
     }
     void GetPlaylistFile(Playlist* playlist, std::function<void(PlaylistCore::BPList)> callback) {
         getLogger().debug("Getting playlist file %s", playlist->Title().c_str());

@@ -36,9 +36,17 @@ void PlaylistDetail::SetupBSMLFields() {
 
 void PlaylistDetail::PostParse() {
     list->tableView->set_selectionType(HMUI::TableViewSelectionType::None);
-    Refresh();
     downloadProgress = QuestUI::BeatSaberUI::CreateProgressBar({-1.4, 3.1, 4}, "Downloading Songs...", "0 / 0", "PlaylistDownloader");
     downloadProgress->get_gameObject()->SetActive(false);
+
+    auto delegate = custom_types::MakeDelegate<System::Action_1<float>*>((std::function<void(float)>) [this](float position) {
+        auto scrollView = list->tableView->scrollView;
+        float pageSize = scrollView->get_scrollPageSize();
+        float remaminingScroll = scrollView->get_contentSize() - pageSize - position;
+        if (remaminingScroll < pageSize)
+            Manager::RequestMoreSongs();
+    });
+    list->tableView->scrollView->add_scrollPositionChangedEvent(delegate);
 }
 
 void PlaylistDetail::OnDestroy() {
@@ -52,51 +60,53 @@ PlaylistDetail* PlaylistDetail::GetInstance() {
     return instance;
 }
 
-void PlaylistDetail::Refresh() {
+void PlaylistDetail::Refresh(bool full) {
     auto playlist = Manager::GetSelectedPlaylist();
     if (!playlist || !list)
         return;
 
     getLogger().debug("Refreshing playlist detail");
 
-    Manager::GetPlaylistCover(playlist, [this, playlist](UnityEngine::Sprite* sprite) {
-        if (playlist != Manager::GetSelectedPlaylist())
-            return;
+    if (full) {
+        Manager::GetPlaylistCover(playlist, [this, playlist](UnityEngine::Sprite* sprite) {
+            if (playlist != Manager::GetSelectedPlaylist() || this != PlaylistDetail::instance)
+                return;
 
-        cover->set_sprite(sprite);
-    });
-    name->SetText(playlist->Title());
-    author->SetText(std::string("<line-height=75%>") + playlist->Author());
-    description->SetText(playlist->Description());
-    description->ScrollTo(0, false);
+            cover->set_sprite(sprite);
+        });
 
-    bool owned = Manager::SelectedPlaylistOwned();
-    download->set_interactable(!owned);
-    downloadSongs->set_interactable(!owned);
+        name->set_text(playlist->Title());
+        author->set_text(std::string("<line-height=75%>") + playlist->Author());
+        description->SetText(playlist->Description());
+        description->ScrollTo(0, false);
 
-    songData->Clear();
-    SetLoading(true);
+        bool owned = Manager::SelectedPlaylistOwned();
+        download->set_interactable(!owned);
+        downloadSongs->set_interactable(!owned);
 
-    Manager::GetPlaylistSongs(playlist, [this, playlist](std::vector<std::optional<BeatSaver::Beatmap>> songs) {
-        if (playlist != Manager::GetSelectedPlaylist() || this != PlaylistDetail::instance)
-            return;
+        songData->Clear();
+    }
 
-        for (auto& song : songs) {
-            if (!song.has_value())
-                continue;
-            songData->Add(BSML::CustomCellInfo::construct(song->GetName(), song->GetUploader().GetUsername()));
-            Manager::GetSongCover(&*song, [this, idx = songData->get_Count() - 1, playlist](UnityEngine::Sprite* cover) {
-                if (playlist != Manager::GetSelectedPlaylist())
-                    return;
+    int currentPos = songData->get_Count();
 
-                songData->get_Item(idx)->icon = cover;
-                list->tableView->RefreshCellsContent();
-            });
-        }
+    auto songs = Manager::GetSongs();
 
-        SetLoading(false);
-        list->tableView->ReloadData();
-    });
+    for (int i = currentPos; i < songs.size(); i++)
+        songData->Add(BSML::CustomCellInfo::construct(songs[i]->GetName(), songs[i]->GetUploader().GetUsername()));
+
+    auto pos = list->tableView->contentTransform->get_anchoredPosition().y;
+    list->tableView->ReloadData();
+    list->tableView->scrollView->ScrollTo(std::min(pos, list->tableView->cellSize * list->NumberOfCells()), false);
+
+    for (int i = currentPos; i < songs.size(); i++) {
+        Manager::GetSongCover(songs[i], [this, i, playlist](UnityEngine::Sprite* cover) {
+            if (playlist != Manager::GetSelectedPlaylist() || this != PlaylistDetail::instance)
+                return;
+
+            songData->get_Item(i)->icon = cover;
+            list->tableView->RefreshCellsContent();
+        });
+    }
 }
 
 void PlaylistDetail::UpdateScrollView() {
