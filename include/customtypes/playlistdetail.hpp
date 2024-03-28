@@ -24,6 +24,7 @@ DECLARE_CLASS_CODEGEN(PlaylistDownloader, PlaylistDetail, HMUI::ViewController,
     DECLARE_INSTANCE_METHOD(void, SetLoading, bool value);
 
     DECLARE_INSTANCE_FIELD(UnityEngine::GameObject*, loadingIndicator);
+    DECLARE_INSTANCE_FIELD(UnityEngine::GameObject*, noResultsText);
     DECLARE_INSTANCE_FIELD(HMUI::ImageView*, cover);
     DECLARE_INSTANCE_FIELD(TMPro::TextMeshProUGUI*, name);
     DECLARE_INSTANCE_FIELD(TMPro::TextMeshProUGUI*, author);

@@ -62,7 +62,7 @@ PlaylistDetail* PlaylistDetail::GetInstance() {
 
 void PlaylistDetail::Refresh(bool full) {
     auto playlist = Manager::GetSelectedPlaylist();
-    if (!playlist || !list)
+    if (!playlist || !list || !noResultsText)
         return;
 
     logger.debug("Refreshing playlist detail");
@@ -90,6 +90,14 @@ void PlaylistDetail::Refresh(bool full) {
     int currentPos = songData->Count;
 
     auto songs = Manager::GetSongs();
+
+    if (!full) {
+        bool noSongs = songs.empty();
+        list->gameObject->active = !noSongs;
+        noResultsText->active = noSongs;
+        if (noSongs)
+            return;
+    }
 
     for (int i = currentPos; i < songs.size(); i++)
         songData->Add(BSML::CustomCellInfo::construct(songs[i]->GetName(), songs[i]->GetUploader().GetUsername()));
@@ -120,8 +128,10 @@ void PlaylistDetail::UpdateScrollView() {
 }
 
 void PlaylistDetail::SetLoading(bool value) {
-    if (!list || !loadingIndicator)
+    if (!list || !loadingIndicator || !noResultsText)
         return;
+    if (value)
+        noResultsText->active = false;
     list->gameObject->active = !value;
     loadingIndicator->active = value;
 }

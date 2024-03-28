@@ -257,6 +257,8 @@ namespace Manager {
             if (count <= 0) {
                 receivedSongsPages++;
                 songsDone = true;
+                PlaylistDetail::GetInstance()->SetLoading(false);
+                PlaylistDetail::GetInstance()->Refresh(false);
                 return;
             }
             auto foundCount = new std::atomic_int(0);

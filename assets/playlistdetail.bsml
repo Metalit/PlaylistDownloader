@@ -20,6 +20,7 @@
         </vertical>
         <horizontal size-delta-x="65" child-expand-width="false" child-control-width="false" child-align="MiddleCenter">
             <loading-indicator id="loadingIndicator" preserve-aspect="true" pref-width="10" pref-height="10"/>
+            <text id="noResultsText" active="false" text="No songs" size-delta-x="20"/>
             <list id="list" data="songData" min-width="60" pref-width="60" expand-cell="true" show-scrollbar="true" stick-scrolling="true" active="false"/>
         </horizontal>
     </horizontal>
