@@ -14,8 +14,8 @@
                 <text-page id="description"/>
             </horizontal>
             <horizontal horizontal-fit="PreferredSize" spacing="2">
-                <button id="download" text="Download" on-click="downloadClicked" pref-height="10" pref-width="18"/>
-                <button id="downloadSongs" text="Download + Songs" on-click="downloadSongsClicked" pref-height="10" pref-width="30"/>
+                <button id="download" text="Download" on-click="downloadClicked" pref-height="10" pref-width="18" hover-hint=""/>
+                <button id="downloadSongs" text="Download + Songs" on-click="downloadSongsClicked" pref-height="10" pref-width="30" hover-hint=""/>
             </horizontal>
         </vertical>
         <horizontal size-delta-x="65" child-expand-width="false" child-control-width="false" child-align="MiddleCenter">

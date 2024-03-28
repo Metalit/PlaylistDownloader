@@ -28,6 +28,7 @@ void PlaylistDetail::DidActivate(bool firstActivation, bool addedToHierarchy, bo
         BSML::parse_and_construct(IncludedAssets::playlistdetail_bsml, transform, this);
     }
     UpdateScrollView();
+    UpdateDownloadButtons();
 }
 
 void PlaylistDetail::SetupBSMLFields() {
@@ -80,9 +81,7 @@ void PlaylistDetail::Refresh(bool full) {
         description->SetText(playlist->Description());
         description->ScrollTo(0, false);
 
-        bool owned = Manager::SelectedPlaylistOwned();
-        download->interactable = !owned;
-        downloadSongs->interactable = !owned;
+        UpdateDownloadButtons();
 
         songData->Clear();
     }
@@ -127,6 +126,17 @@ void PlaylistDetail::UpdateScrollView() {
     table->scrollView->ScrollTo(std::min(pos, table->cellSize * table->numberOfCells), false);
 }
 
+void PlaylistDetail::UpdateDownloadButtons() {
+    if (!download || !downloadSongs)
+        return;
+
+    bool active = !Manager::SelectedPlaylistOwned();
+    // set inactive during download
+    if (downloadProgress->gameObject->active) active = false;
+    download->interactable = active;
+    downloadSongs->interactable = active;
+}
+
 void PlaylistDetail::SetLoading(bool value) {
     if (!list || !loadingIndicator || !noResultsText)
         return;
@@ -136,15 +146,28 @@ void PlaylistDetail::SetLoading(bool value) {
     loadingIndicator->active = value;
 }
 
+void PlaylistDetail::SetDownloading(bool value) {
+    if (!download || !downloadSongs || !downloadProgress)
+        return;
+    downloadProgress->gameObject->active = value;
+    UpdateDownloadButtons();
+
+    auto hover = value ? "Waiting for download..." : "";
+    download->GetComponent<HMUI::HoverHint*>()->text = hover;
+    downloadSongs->GetComponent<HMUI::HoverHint*>()->text = hover;
+}
+
 void PlaylistDetail::downloadClicked() {
     auto playlist = Manager::GetSelectedPlaylist();
     if (!playlist)
         return;
 
-    download->interactable = false;
-    downloadSongs->interactable = false;
+    SetDownloading(true);
 
-    Manager::GetPlaylistFile(playlist, [](PlaylistCore::BPList file) { PlaylistCore::AddPlaylist(file); });
+    Manager::GetPlaylistFile(playlist, [this](PlaylistCore::BPList file) {
+        PlaylistCore::AddPlaylist(file);
+        SetDownloading(false);
+    });
 }
 
 void PlaylistDetail::downloadSongsClicked() {
@@ -152,8 +175,7 @@ void PlaylistDetail::downloadSongsClicked() {
     if (!playlist)
         return;
 
-    download->interactable = false;
-    downloadSongs->interactable = false;
+    SetDownloading(true);
 
     Manager::GetPlaylistFile(playlist, [this](PlaylistCore::BPList file) {
         if (this != PlaylistDetail::instance)
@@ -170,7 +192,7 @@ void PlaylistDetail::downloadSongsClicked() {
                     if (this != PlaylistDetail::instance)
                         return;
                     SongCore::API::Loading::RefreshSongs(false);
-                    downloadProgress->gameObject->active = false;
+                    SetDownloading(false);
                 });
             },
             [this](int progress, int total) {

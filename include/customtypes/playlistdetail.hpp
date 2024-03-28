@@ -21,7 +21,9 @@ DECLARE_CLASS_CODEGEN(PlaylistDownloader, PlaylistDetail, HMUI::ViewController,
     DECLARE_STATIC_METHOD(PlaylistDownloader::PlaylistDetail*, GetInstance);
     DECLARE_INSTANCE_METHOD(void, Refresh, bool full);
     DECLARE_INSTANCE_METHOD(void, UpdateScrollView);
+    DECLARE_INSTANCE_METHOD(void, UpdateDownloadButtons);
     DECLARE_INSTANCE_METHOD(void, SetLoading, bool value);
+    DECLARE_INSTANCE_METHOD(void, SetDownloading, bool value);
 
     DECLARE_INSTANCE_FIELD(UnityEngine::GameObject*, loadingIndicator);
     DECLARE_INSTANCE_FIELD(UnityEngine::GameObject*, noResultsText);
