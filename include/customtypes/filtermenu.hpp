@@ -3,26 +3,24 @@
 #include "custom-types/shared/macros.hpp"
 
 #include "HMUI/ViewController.hpp"
-#include "HMUI/IconSegmentedControl_DataItem.hpp"
+#include "HMUI/IconSegmentedControl.hpp"
 #include "UnityEngine/Transform.hpp"
 #include "UnityEngine/UI/Button.hpp"
 #include "HMUI/ModalView.hpp"
 #include "bsml/shared/BSML/Components/Settings/ToggleSetting.hpp"
 #include "bsml/shared/BSML/Components/Settings/ListSetting.hpp"
 
-#define METHOD(...) il2cpp_utils::il2cpp_type_check::MetadataGetter<&__VA_ARGS__>::get()
-
 DECLARE_CLASS_CODEGEN(PlaylistDownloader, FilterMenu, HMUI::ViewController,
 
     DECLARE_INSTANCE_METHOD(void, OnEnable);
-    DECLARE_OVERRIDE_METHOD(void, DidActivate, METHOD(HMUI::ViewController::DidActivate), bool firstActivation, bool addedToHierarchy, bool screenSystemEnabling);
+    DECLARE_OVERRIDE_METHOD_MATCH(void, DidActivate, &HMUI::ViewController::DidActivate, bool firstActivation, bool addedToHierarchy, bool screenSystemEnabling);
     DECLARE_INSTANCE_METHOD(void, SetupBSMLFields);
     DECLARE_INSTANCE_METHOD(void, PostParse);
     DECLARE_INSTANCE_METHOD(void, OnDestroy);
     DECLARE_STATIC_METHOD(PlaylistDownloader::FilterMenu*, GetInstance);
 
-    DECLARE_INSTANCE_FIELD(List<HMUI::IconSegmentedControl::DataItem*>*, sourceIconData);
-    DECLARE_INSTANCE_FIELD(List<StringW>*, sorts);
+    DECLARE_INSTANCE_FIELD(ListW<HMUI::IconSegmentedControl::DataItem*>, sourceIconData);
+    DECLARE_INSTANCE_FIELD(ListW<StringW>, sorts);
 
     DECLARE_INSTANCE_FIELD(UnityEngine::Transform*, filterBar);
     DECLARE_INSTANCE_FIELD(HMUI::IconSegmentedControl*, sourceIconControl);

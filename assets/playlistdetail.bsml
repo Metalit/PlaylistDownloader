@@ -10,7 +10,7 @@
                     <text id="author" align="Left" word-wrapping="true" color="#FFFFFFBF"/>
                 </vertical>
             </horizontal>
-            <horizontal pref-width="63" pref-height="40" pad-left="-3">
+            <horizontal pref-width="63" pref-height="40" pad-left="3">
                 <text-page id="description"/>
             </horizontal>
             <horizontal horizontal-fit="PreferredSize" spacing="2">

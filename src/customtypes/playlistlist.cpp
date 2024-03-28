@@ -1,46 +1,44 @@
-#include "main.hpp"
-#include "manager.hpp"
-#include "assets.hpp"
 #include "customtypes/playlistlist.hpp"
-#include "customtypes/mainmenu.hpp"
-
-#include "bsml/shared/BSML.hpp"
-#include "questui/shared/BeatSaberUI.hpp"
 
 #include "HMUI/ScrollView.hpp"
 #include "System/Action_1.hpp"
+#include "assets.hpp"
+#include "bsml/shared/BSML.hpp"
+#include "bsml/shared/Helpers/creation.hpp"
 #include "custom-types/shared/delegate.hpp"
+#include "customtypes/mainmenu.hpp"
+#include "main.hpp"
+#include "manager.hpp"
 
 DEFINE_TYPE(PlaylistDownloader, PlaylistList);
 
 using namespace PlaylistDownloader;
-using namespace QuestUI;
 
 void PlaylistList::OnEnable() {
-    set_name("PlaylistList");
-    get_rectTransform()->set_anchorMin({0.5, 0.5});
-    get_rectTransform()->set_anchorMax({0.5, 0.5});
-    get_rectTransform()->set_sizeDelta({75, 65});
+    name = "PlaylistList";
+    rectTransform->anchorMin = {0.5, 0.5};
+    rectTransform->anchorMax = {0.5, 0.5};
+    rectTransform->sizeDelta = {75, 65};
 }
 
 void PlaylistList::DidActivate(bool firstActivation, bool addedToHierarchy, bool screenSystemEnabling) {
     if (firstActivation) {
         SetupBSMLFields();
         // AddHotReload(this, "playlistlist");
-        BSML::parse_and_construct(IncludedAssets::playlistlist_bsml, get_transform(), this);
+        BSML::parse_and_construct(IncludedAssets::playlistlist_bsml, transform, this);
     }
     UpdateScrollView();
 }
 
 void PlaylistList::SetupBSMLFields() {
-    playlistData = List<BSML::CustomCellInfo*>::New_ctor();
+    playlistData = ListW<BSML::CustomCellInfo*>::New();
 }
 
 void PlaylistList::PostParse() {
     auto delegate = custom_types::MakeDelegate<System::Action_1<float>*>((std::function<void(float)>) [this](float position) {
         auto scrollView = list->tableView->scrollView;
-        float pageSize = scrollView->get_scrollPageSize();
-        float remaminingScroll = scrollView->get_contentSize() - pageSize - position;
+        float pageSize = scrollView->scrollPageSize;
+        float remaminingScroll = scrollView->contentSize - pageSize - position;
         if (remaminingScroll < pageSize)
             Manager::RequestMorePlaylists();
     });
@@ -54,26 +52,32 @@ void PlaylistList::OnDestroy() {
 
 PlaylistList* PlaylistList::GetInstance() {
     if (!instance)
-        instance = BeatSaberUI::CreateViewController<PlaylistList*>();
+        instance = BSML::Helpers::CreateViewController<PlaylistList*>();
     return instance;
 }
 
 void PlaylistList::Refresh(bool full) {
-    if (!list || !playlistData)
+    if (!list || !playlistData || !noResultsText)
         return;
-    getLogger().debug("Refreshing playlist list");
+    logger.debug("Refreshing playlist list");
     if (full)
         playlistData->Clear();
 
-    int currentPos = playlistData->get_Count();
+    int currentPos = playlistData->Count;
 
     auto playlists = Manager::GetPlaylists();
     auto state = Manager::GetState();
 
+    bool noResults = playlists.empty();
+    list->gameObject->active = !noResults;
+    noResultsText->active = noResults;
+    if (noResults)
+        return;
+
     for (int i = currentPos; i < playlists.size(); i++)
         playlistData->Add(BSML::CustomCellInfo::construct(playlists[i]->Title(), playlists[i]->Author()));
 
-    auto pos = list->tableView->contentTransform->get_anchoredPosition().y;
+    auto pos = list->tableView->contentTransform->anchoredPosition.y;
     list->tableView->ReloadData();
     list->tableView->scrollView->ScrollTo(std::min(pos, list->tableView->cellSize * list->NumberOfCells()), false);
 
@@ -82,7 +86,7 @@ void PlaylistList::Refresh(bool full) {
             if (state != Manager::GetState() || this != PlaylistList::instance)
                 return;
 
-            playlistData->get_Item(i)->icon = cover;
+            playlistData[i]->icon = cover;
             list->tableView->RefreshCellsContent();
         });
     }
@@ -93,23 +97,24 @@ void PlaylistList::UpdateScrollView() {
         return;
 
     auto table = list->tableView;
-    auto pos = table->contentTransform->get_anchoredPosition().y;
+    auto pos = table->contentTransform->anchoredPosition.y;
     table->RefreshContentSize();
     table->scrollView->ScrollTo(std::min(pos, table->cellSize * table->numberOfCells), false);
 }
 
 void PlaylistList::SetLoading(bool value) {
-    if (!list || !loadingIndicator)
+    if (!list || !loadingIndicator || !noResultsText)
         return;
     if (value) {
         list->tableView->ClearSelection();
         list->tableView->scrollView->ScrollTo(0, false);
+        noResultsText->active = false;
     }
-    list->get_gameObject()->SetActive(!value);
-    loadingIndicator->SetActive(value);
+    list->gameObject->active = !value;
+    loadingIndicator->active = value;
 }
 
 void PlaylistList::cellSelected(HMUI::TableView* table, int cellIdx) {
-    getLogger().info("Playlist %i selected", cellIdx);
+    logger.info("Playlist {} selected", cellIdx);
     Manager::SelectPlaylist(cellIdx);
 }

@@ -1,48 +1,48 @@
-#include "main.hpp"
-#include "manager.hpp"
-#include "assets.hpp"
 #include "customtypes/playlistdetail.hpp"
 
+#include "assets.hpp"
 #include "bsml/shared/BSML.hpp"
-#include "questui/shared/BeatSaberUI.hpp"
-
+#include "bsml/shared/BSML/MainThreadScheduler.hpp"
+#include "bsml/shared/Helpers/creation.hpp"
+#include "main.hpp"
+#include "manager.hpp"
 #include "playlistcore/shared/PlaylistCore.hpp"
-#include "songloader/shared/API.hpp"
+#include "songcore/shared/SongCore.hpp"
+#include "songdownloader/shared/BeatSaverAPI.hpp"
 
 DEFINE_TYPE(PlaylistDownloader, PlaylistDetail);
 
 using namespace PlaylistDownloader;
-using namespace QuestUI;
 
 void PlaylistDetail::OnEnable() {
     set_name("PlaylistDetail");
-    get_rectTransform()->set_anchorMin({0.5, 0.5});
-    get_rectTransform()->set_anchorMax({0.5, 0.5});
-    get_rectTransform()->set_sizeDelta({140, 65});
+    rectTransform->anchorMin = {0.5, 0.5};
+    rectTransform->anchorMax = {0.5, 0.5};
+    rectTransform->sizeDelta = {140, 65};
 }
 
 void PlaylistDetail::DidActivate(bool firstActivation, bool addedToHierarchy, bool screenSystemEnabling) {
     if (firstActivation) {
         SetupBSMLFields();
         // AddHotReload(this, "playlistdetail");
-        BSML::parse_and_construct(IncludedAssets::playlistdetail_bsml, get_transform(), this);
+        BSML::parse_and_construct(IncludedAssets::playlistdetail_bsml, transform, this);
     }
     UpdateScrollView();
 }
 
 void PlaylistDetail::SetupBSMLFields() {
-    songData = List<BSML::CustomCellInfo*>::New_ctor();
+    songData = ListW<BSML::CustomCellInfo*>::New();
 }
 
 void PlaylistDetail::PostParse() {
-    list->tableView->set_selectionType(HMUI::TableViewSelectionType::None);
-    downloadProgress = QuestUI::BeatSaberUI::CreateProgressBar({-1.4, 3.1, 4}, "Downloading Songs...", "0 / 0", "PlaylistDownloader");
-    downloadProgress->get_gameObject()->SetActive(false);
+    list->tableView->selectionType = HMUI::TableViewSelectionType::None;
+    downloadProgress = BSML::Lite::CreateProgressBar({-1.4, 3.1, 4}, "Downloading Songs...", "0 / 0", "PlaylistDownloader");
+    downloadProgress->gameObject->active = false;
 
     auto delegate = custom_types::MakeDelegate<System::Action_1<float>*>((std::function<void(float)>) [this](float position) {
         auto scrollView = list->tableView->scrollView;
-        float pageSize = scrollView->get_scrollPageSize();
-        float remaminingScroll = scrollView->get_contentSize() - pageSize - position;
+        float pageSize = scrollView->scrollPageSize;
+        float remaminingScroll = scrollView->contentSize - pageSize - position;
         if (remaminingScroll < pageSize)
             Manager::RequestMoreSongs();
     });
@@ -56,7 +56,7 @@ void PlaylistDetail::OnDestroy() {
 
 PlaylistDetail* PlaylistDetail::GetInstance() {
     if (!instance)
-        instance = BeatSaberUI::CreateViewController<PlaylistDetail*>();
+        instance = BSML::Helpers::CreateViewController<PlaylistDetail*>();
     return instance;
 }
 
@@ -65,36 +65,36 @@ void PlaylistDetail::Refresh(bool full) {
     if (!playlist || !list)
         return;
 
-    getLogger().debug("Refreshing playlist detail");
+    logger.debug("Refreshing playlist detail");
 
     if (full) {
         Manager::GetPlaylistCover(playlist, [this, playlist](UnityEngine::Sprite* sprite) {
             if (playlist != Manager::GetSelectedPlaylist() || this != PlaylistDetail::instance)
                 return;
 
-            cover->set_sprite(sprite);
+            cover->sprite = sprite;
         });
 
-        name->set_text(playlist->Title());
-        author->set_text(std::string("<line-height=75%>") + playlist->Author());
+        name->text = playlist->Title();
+        author->text = std::string("<line-height=75%>") + playlist->Author();
         description->SetText(playlist->Description());
         description->ScrollTo(0, false);
 
         bool owned = Manager::SelectedPlaylistOwned();
-        download->set_interactable(!owned);
-        downloadSongs->set_interactable(!owned);
+        download->interactable = !owned;
+        downloadSongs->interactable = !owned;
 
         songData->Clear();
     }
 
-    int currentPos = songData->get_Count();
+    int currentPos = songData->Count;
 
     auto songs = Manager::GetSongs();
 
     for (int i = currentPos; i < songs.size(); i++)
         songData->Add(BSML::CustomCellInfo::construct(songs[i]->GetName(), songs[i]->GetUploader().GetUsername()));
 
-    auto pos = list->tableView->contentTransform->get_anchoredPosition().y;
+    auto pos = list->tableView->contentTransform->anchoredPosition.y;
     list->tableView->ReloadData();
     list->tableView->scrollView->ScrollTo(std::min(pos, list->tableView->cellSize * list->NumberOfCells()), false);
 
@@ -103,7 +103,7 @@ void PlaylistDetail::Refresh(bool full) {
             if (playlist != Manager::GetSelectedPlaylist() || this != PlaylistDetail::instance)
                 return;
 
-            songData->get_Item(i)->icon = cover;
+            songData[i]->icon = cover;
             list->tableView->RefreshCellsContent();
         });
     }
@@ -114,7 +114,7 @@ void PlaylistDetail::UpdateScrollView() {
         return;
 
     auto table = list->tableView;
-    auto pos = table->contentTransform->get_anchoredPosition().y;
+    auto pos = table->contentTransform->anchoredPosition.y;
     table->RefreshContentSize();
     table->scrollView->ScrollTo(std::min(pos, table->cellSize * table->numberOfCells), false);
 }
@@ -122,8 +122,8 @@ void PlaylistDetail::UpdateScrollView() {
 void PlaylistDetail::SetLoading(bool value) {
     if (!list || !loadingIndicator)
         return;
-    list->get_gameObject()->SetActive(!value);
-    loadingIndicator->SetActive(value);
+    list->gameObject->active = !value;
+    loadingIndicator->active = value;
 }
 
 void PlaylistDetail::downloadClicked() {
@@ -131,12 +131,10 @@ void PlaylistDetail::downloadClicked() {
     if (!playlist)
         return;
 
-    download->set_interactable(false);
-    downloadSongs->set_interactable(false);
+    download->interactable = false;
+    downloadSongs->interactable = false;
 
-    Manager::GetPlaylistFile(playlist, [](PlaylistCore::BPList file) {
-        PlaylistCore::AddPlaylist(file);
-    });
+    Manager::GetPlaylistFile(playlist, [](PlaylistCore::BPList file) { PlaylistCore::AddPlaylist(file); });
 }
 
 void PlaylistDetail::downloadSongsClicked() {
@@ -144,28 +142,34 @@ void PlaylistDetail::downloadSongsClicked() {
     if (!playlist)
         return;
 
-    download->set_interactable(false);
-    downloadSongs->set_interactable(false);
+    download->interactable = false;
+    downloadSongs->interactable = false;
 
     Manager::GetPlaylistFile(playlist, [this](PlaylistCore::BPList file) {
         if (this != PlaylistDetail::instance)
             return;
         auto [_, playlist] = PlaylistCore::AddPlaylist(file);
 
-        downloadProgress->subText1->SetText("0 / 0");
+        downloadProgress->subText1->text = "0 / 0";
         downloadProgress->SetProgress(0);
 
-        PlaylistCore::DownloadMissingSongsFromPlaylist(playlist, [this]() {
-            if (this != PlaylistDetail::instance)
-                return;
-            RuntimeSongLoader::API::RefreshSongs(false);
-            downloadProgress->get_gameObject()->SetActive(false);
-        },
-        [this](int progress, int total) {
-            if (this != PlaylistDetail::instance)
-                return;
-            downloadProgress->subText1->SetText(std::to_string(progress) + " / " + std::to_string(total));
-            downloadProgress->SetProgress(progress / (float) total);
-        });
+        BeatSaver::API::DownloadMissingSongsFromPlaylist(
+            playlist,
+            [this]() {
+                BSML::MainThreadScheduler::Schedule([this]() {
+                    if (this != PlaylistDetail::instance)
+                        return;
+                    SongCore::API::Loading::RefreshSongs(false);
+                    downloadProgress->gameObject->active = false;
+                });
+            },
+            [this](int progress, int total) {
+                BSML::MainThreadScheduler::Schedule([this, progress, total]() {
+                    if (this != PlaylistDetail::instance)
+                        return;
+                    downloadProgress->subText1->text = fmt::format("{} / {}", progress, total);
+                    downloadProgress->SetProgress(progress / (float) total);
+                });
+            });
     });
 }

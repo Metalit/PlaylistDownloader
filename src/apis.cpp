@@ -22,7 +22,7 @@ void GetAccSaberPlaylists(std::function<void(std::vector<std::unique_ptr<Playlis
         try {
             ReadFromString(data, resp);
         } catch (const JSONException& exc) {
-            getLogger().error("Failed to deserialize accsaber response %s: %s", data.c_str(), exc.what());
+            logger.error("Failed to deserialize accsaber response {}: {}", data, exc.what());
         }
         std::vector<std::unique_ptr<Playlist>> ret = {};
         for (auto& playlist : resp.Playlists) {
@@ -46,7 +46,7 @@ void GetBeatSaverPlaylists(std::function<void(std::vector<std::unique_ptr<Playli
         try {
             ReadFromString(data, resp);
         } catch (const JSONException& exc) {
-            getLogger().error("Failed to deserialize beatsaver response %s: %s", data.c_str(), exc.what());
+            logger.error("Failed to deserialize beatsaver response {}: {}", data, exc.what());
         }
         std::vector<std::unique_ptr<Playlist>> ret = {};
         for (auto& playlist : resp.Playlists)
@@ -65,7 +65,7 @@ void GetBeatLeaderPlaylists(std::function<void(std::vector<std::unique_ptr<Playl
         try {
             ReadFromString(data, resp);
         } catch (const JSONException& exc) {
-            getLogger().error("Failed to deserialize beatleader response %s: %s", data.c_str(), exc.what());
+            logger.error("Failed to deserialize beatleader response {}: {}", data, exc.what());
         }
         std::vector<std::unique_ptr<Playlist>> ret = {};
         for (auto& playlist : resp.Playlists)
@@ -85,7 +85,7 @@ void GetHitbloqPlaylists(std::function<void(std::vector<std::unique_ptr<Playlist
         try {
             ReadFromString(data, resp);
         } catch (const JSONException& exc) {
-            getLogger().error("Failed to deserialize hitbloq response %s: %s", data.c_str(), exc.what());
+            logger.error("Failed to deserialize hitbloq response {}: {}", data, exc.what());
         }
         std::vector<std::unique_ptr<Playlist>> ret = {};
         for (auto& playlist : resp.Playlists)

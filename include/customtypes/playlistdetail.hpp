@@ -9,14 +9,12 @@
 #include "HMUI/TextPageScrollView.hpp"
 #include "UnityEngine/UI/Button.hpp"
 #include "bsml/shared/BSML/Components/CustomListTableData.hpp"
-#include "questui/shared/CustomTypes/Components/ProgressBar/ProgressBar.hpp"
-
-#define METHOD(...) il2cpp_utils::il2cpp_type_check::MetadataGetter<&__VA_ARGS__>::get()
+#include "bsml/shared/BSML/Components/ProgressBar.hpp"
 
 DECLARE_CLASS_CODEGEN(PlaylistDownloader, PlaylistDetail, HMUI::ViewController,
 
     DECLARE_INSTANCE_METHOD(void, OnEnable);
-    DECLARE_OVERRIDE_METHOD(void, DidActivate, METHOD(HMUI::ViewController::DidActivate), bool firstActivation, bool addedToHierarchy, bool screenSystemEnabling);
+    DECLARE_OVERRIDE_METHOD_MATCH(void, DidActivate, &HMUI::ViewController::DidActivate, bool firstActivation, bool addedToHierarchy, bool screenSystemEnabling);
     DECLARE_INSTANCE_METHOD(void, SetupBSMLFields);
     DECLARE_INSTANCE_METHOD(void, PostParse);
     DECLARE_INSTANCE_METHOD(void, OnDestroy);
@@ -33,11 +31,11 @@ DECLARE_CLASS_CODEGEN(PlaylistDownloader, PlaylistDetail, HMUI::ViewController,
     DECLARE_INSTANCE_FIELD(UnityEngine::UI::Button*, download);
     DECLARE_INSTANCE_FIELD(UnityEngine::UI::Button*, downloadSongs);
     DECLARE_INSTANCE_FIELD(BSML::CustomListTableData*, list);
-    DECLARE_INSTANCE_FIELD(List<BSML::CustomCellInfo*>*, songData);
+    DECLARE_INSTANCE_FIELD(ListW<BSML::CustomCellInfo*>, songData);
     DECLARE_INSTANCE_METHOD(void, downloadClicked);
     DECLARE_INSTANCE_METHOD(void, downloadSongsClicked);
 
-    DECLARE_INSTANCE_FIELD(QuestUI::ProgressBar*, downloadProgress);
+    DECLARE_INSTANCE_FIELD(BSML::ProgressBar*, downloadProgress);
 
     private:
     static inline PlaylistDownloader::PlaylistDetail* instance;

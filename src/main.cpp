@@ -1,40 +1,28 @@
 #include "main.hpp"
+
+#include "bsml/shared/BSML.hpp"
 #include "config.hpp"
 #include "customtypes/mainmenu.hpp"
+#include "scotland2/shared/modloader.h"
 
-// #include "TMPro/TMP_Settings.hpp"
-// #include "TMPro/TMP_FontAsset.hpp"
-// #include "System/Collections/Generic/Dictionary_2.hpp"
+static modloader::ModInfo modInfo = {MOD_ID, VERSION, 0};
 
-// bool HasChar(const char c) {
-//     auto asset = TMPro::TMP_Settings::get_defaultFontAsset();
-//     TMPro::TMP_Character* value;
-//     asset->get_characterLookupTable()->TryGetValue(c, byref(value));
-//     return value != nullptr;
-// }
+extern "C" void setup(CModInfo* info) {
+    Paper::Logger::RegisterFileContextId(MOD_ID);
 
-#include "questui/shared/QuestUI.hpp"
+    info->id = MOD_ID;
+    info->version = VERSION;
+    modInfo.assign(*info);
 
-static ModInfo modInfo;
+    getConfig().Init(modInfo);
 
-Logger& getLogger() {
-    static Logger* logger = new Logger(modInfo, {false, true});
-    return *logger;
+    logger.info("PlaylistDownloader setup!");
 }
 
-extern "C" void setup(ModInfo& info) {
-    info.id = MOD_ID;
-    info.version = VERSION;
-    modInfo = info;
-
-    getConfig().Init(info);
-
-    getLogger().info("Completed setup!");
-}
-
-extern "C" void load() {
+extern "C" void late_load() {
     il2cpp_functions::Init();
-
-    QuestUI::Init();
-    QuestUI::Register::RegisterMainMenuModSettingsViewController<PlaylistDownloader::MainMenu*>(modInfo, "More Playlists");
+    custom_types::Register::AutoRegister();
+    BSML::Init();
+    BSML::Register::RegisterMainMenu<PlaylistDownloader::MainMenu*>("Playlist Downloader", "More Playlists", "Download more playlists!");
+    logger.info("PlaylistDownloader loaded!");
 }

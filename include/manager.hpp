@@ -1,10 +1,9 @@
 #pragma once
 
-#include "apis.hpp"
-#include "songdownloader/shared/BeatSaverAPI.hpp"
-#include "playlistcore/shared/Types/BPList.hpp"
-
 #include "UnityEngine/Sprite.hpp"
+#include "apis.hpp"
+#include "playlistcore/shared/Types/BPList.hpp"
+#include "songdownloader/shared/BeatSaverAPI.hpp"
 
 namespace Manager {
 
@@ -14,7 +13,7 @@ namespace Manager {
         bool curated;
         bool includeEmpty;
         std::string sort;
-        bool operator==(const State& other) const = default;
+        bool operator==(State const& other) const = default;
     };
 
     void Refresh();

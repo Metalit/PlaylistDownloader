@@ -1,16 +1,14 @@
-#include "config.hpp"
-#include "main.hpp"
 #include "manager.hpp"
-#include "webutil.hpp"
 
+#include "bsml/shared/BSML/MainThreadScheduler.hpp"
+#include "bsml/shared/Helpers/utilities.hpp"
+#include "config.hpp"
 #include "customtypes/mainmenu.hpp"
-#include "customtypes/playlistlist.hpp"
 #include "customtypes/playlistdetail.hpp"
-
-#include "questui/shared/BeatSaberUI.hpp"
-#include "questui/shared/CustomTypes/Components/MainThreadScheduler.hpp"
+#include "customtypes/playlistlist.hpp"
+#include "main.hpp"
 #include "playlistcore/shared/PlaylistCore.hpp"
-#include <string>
+#include "webutil.hpp"
 
 using namespace PlaylistDownloader;
 
@@ -18,34 +16,35 @@ using namespace PlaylistDownloader;
 #define PLAYLIST_SONGS_PAGE_SIZE 10
 
 // https://gist.github.com/jagt/5797948
-template<class K, class V, int MaxSize = -1>
+template <class K, class V, int MaxSize = -1>
 class cache {
-private:
+   private:
     struct Entry {
         K key;
         V value;
-        Entry *prev;
-        Entry *next;
+        Entry* prev;
+        Entry* next;
     };
 
     std::map<K, Entry*> dict;
     Entry *head, *tail;
-    cache(const cache &rhs);
-    cache& operator = (const cache &rhs);
+    cache(cache const& rhs);
+    cache& operator=(cache const& rhs);
 
-    Entry* detach(Entry *entry) {
+    Entry* detach(Entry* entry) {
         entry->prev->next = entry->next;
         entry->next->prev = entry->prev;
         return entry;
     }
 
-    void push_front(Entry *entry) {
+    void push_front(Entry* entry) {
         entry->next = head->next;
         entry->next->prev = entry;
         entry->prev = head;
         head->next = entry;
     }
-public:
+
+   public:
     cache() : dict() {
         head = new Entry();
         tail = new Entry();
@@ -61,8 +60,8 @@ public:
         delete tail;
     }
 
-    void add(const K &key, const V &value) {
-        Entry *entry = new Entry();
+    void add(K const& key, V const& value) {
+        Entry* entry = new Entry();
         entry->key = key;
         entry->value = value;
         push_front(entry);
@@ -73,17 +72,15 @@ public:
         }
     }
 
-    V& get(const K &key) {
-        Entry *entry = dict[key];
+    V& get(K const& key) {
+        Entry* entry = dict[key];
         // move to head
         detach(entry);
         push_front(entry);
         return entry->value;
     }
 
-    bool has(const K& key) const {
-        return dict.contains(key);
-    }
+    bool has(K const& key) const { return dict.contains(key); }
 
     void drop() {
         Entry* entry = detach(tail->prev);
@@ -93,7 +90,7 @@ public:
 
     size_t size() const {
         size_t size = 0;
-        Entry *p = head;
+        Entry* p = head;
         while (p->next != tail) {
             ++size;
             p = p->next;
@@ -102,13 +99,13 @@ public:
     }
 };
 
-template<class T>
+template <class T>
 struct dumb_function_copyable {
-    dumb_function_copyable(T&& arg) : arg(std::move(arg)) {};
-    dumb_function_copyable(const dumb_function_copyable<T>& other)
-        : arg(std::move(const_cast<T&>(other.arg))) {};
+    dumb_function_copyable(T&& arg) : arg(std::move(arg)){};
+    dumb_function_copyable(dumb_function_copyable<T> const& other) : arg(std::move(const_cast<T&>(other.arg))){};
     T& get() { return arg; }
-    private:
+
+   private:
     T arg;
 };
 
@@ -132,7 +129,7 @@ namespace Manager {
     cache<std::string, PlaylistCore::BPList, 100> cachedPlaylists = {};
 
     void Refresh() {
-        getLogger().debug("Refreshing playlists");
+        logger.debug("Refreshing playlists");
         page = receivedPages = 0;
         done = false;
         playlists.clear();
@@ -141,7 +138,7 @@ namespace Manager {
         RequestMorePlaylists();
     }
     void RefreshSelected() {
-        getLogger().debug("Refreshing playlist selection");
+        logger.debug("Refreshing playlist selection");
         songsPage = receivedSongsPages = 0;
         songsDone = false;
         songs.clear();
@@ -159,14 +156,14 @@ namespace Manager {
     }
 
     void SetSearch(std::string value) {
-        getLogger().debug("Searching %s", value.c_str());
+        logger.debug("Searching {}", value);
         if (value == search)
             return;
         search = value;
         Refresh();
     }
     void SetSource(int newSource) {
-        getLogger().debug("Source set to %i", newSource);
+        logger.debug("Source set to {}", newSource);
         if (newSource == source)
             return;
         source = newSource;
@@ -176,27 +173,21 @@ namespace Manager {
         if (page > receivedPages || done)
             return;
         bool firstRequest = page == 0;
-        getLogger().info("Requesting playlists from %i search %s", source, search.c_str());
+        logger.info("Requesting playlists from {} search {}", source, search);
         auto callback = [pastState = GetState(), firstRequest](std::vector<std::unique_ptr<Playlist>> newPlaylists) mutable {
-
             using capture_fix = dumb_function_copyable<std::vector<std::unique_ptr<Playlist>>>;
             auto arg = capture_fix(std::move(newPlaylists));
 
-            QuestUI::MainThreadScheduler::Schedule([pastState, firstRequest, arg]() mutable {
+            BSML::MainThreadScheduler::Schedule([pastState, firstRequest, arg]() mutable {
                 if (pastState != GetState())
                     return;
                 if (!arg.get().empty()) {
-                    playlists.insert(playlists.end(),
-                        std::make_move_iterator(arg.get().begin()),
-                        std::make_move_iterator(arg.get().end())
-                    );
+                    playlists.insert(playlists.end(), std::make_move_iterator(arg.get().begin()), std::make_move_iterator(arg.get().end()));
                 } else
                     done = true;
                 receivedPages++;
-                if (!done) {
-                    PlaylistList::GetInstance()->SetLoading(false);
-                    PlaylistList::GetInstance()->Refresh(firstRequest);
-                }
+                PlaylistList::GetInstance()->SetLoading(false);
+                PlaylistList::GetInstance()->Refresh(firstRequest);
             });
         };
         switch (source) {
@@ -240,7 +231,7 @@ namespace Manager {
     }
 
     void SelectPlaylist(int playlistIdx) {
-        getLogger().debug("Playlist set to %i", playlistIdx);
+        logger.debug("Playlist set to {}", playlistIdx);
         selectedPlaylist = playlistIdx;
         RefreshSelected();
     }
@@ -254,7 +245,7 @@ namespace Manager {
         auto playlist = GetSelectedPlaylist();
         if (!playlist || songsPage > receivedSongsPages || songsDone)
             return;
-        getLogger().debug("Getting playlist songs %s page %i", playlist->Title().c_str(), songsPage);
+        logger.debug("Getting playlist songs {} page {}", playlist->Title(), songsPage);
         auto callback = [currentPage = songsPage, playlist](PlaylistCore::BPList downloaded) {
             if (playlist != GetSelectedPlaylist())
                 return;
@@ -271,28 +262,29 @@ namespace Manager {
             auto foundCount = new std::atomic_int(0);
             auto foundMaps = new std::vector<std::optional<BeatSaver::Beatmap>>(count);
             for (int i = start; i < end; i++) {
-                getLogger().debug("Getting playlist song %i / %li", i, bpSongs.size());
-                BeatSaver::API::GetBeatmapByHashAsync(bpSongs[i].Hash, [foundCount, foundMaps, i, count, start, playlist](std::optional<BeatSaver::Beatmap> map) {
-                    foundMaps->at(i - start) = map;
-                    int newCount = foundCount->fetch_add(1) + 1;
-                    if (map.has_value())
-                        getLogger().debug("Got playlist song %i total %i / %i", i, newCount, count);
-                    else
-                        getLogger().debug("Failed to get playlist song %i total %i / %i", i, newCount, count);
-                    if (newCount == count) {
-                        if (playlist == GetSelectedPlaylist()) {
-                            QuestUI::MainThreadScheduler::Schedule([maps = *foundMaps]() {
-                                for (auto& map : maps)
-                                    songs.push_back(map);
-                                receivedSongsPages++;
-                                PlaylistDetail::GetInstance()->SetLoading(false);
-                                PlaylistDetail::GetInstance()->Refresh(false);
-                            });
+                logger.debug("Getting playlist song {} / {}", i, bpSongs.size());
+                BeatSaver::API::GetBeatmapByHashAsync(
+                    bpSongs[i].Hash, [foundCount, foundMaps, i, count, start, playlist](std::optional<BeatSaver::Beatmap> map) {
+                        foundMaps->at(i - start) = map;
+                        int newCount = foundCount->fetch_add(1) + 1;
+                        if (map.has_value())
+                            logger.debug("Got playlist song {} total {} / {}", i, newCount, count);
+                        else
+                            logger.debug("Failed to get playlist song {} total {} / {}", i, newCount, count);
+                        if (newCount == count) {
+                            if (playlist == GetSelectedPlaylist()) {
+                                BSML::MainThreadScheduler::Schedule([maps = *foundMaps]() {
+                                    for (auto& map : maps)
+                                        songs.push_back(map);
+                                    receivedSongsPages++;
+                                    PlaylistDetail::GetInstance()->SetLoading(false);
+                                    PlaylistDetail::GetInstance()->Refresh(false);
+                                });
+                            }
+                            delete foundCount;
+                            delete foundMaps;
                         }
-                        delete foundCount;
-                        delete foundMaps;
-                    }
-                });
+                    });
             }
         };
         GetPlaylistFile(playlist, callback);
@@ -310,28 +302,34 @@ namespace Manager {
     }
 
     void GetPlaylistCover(Playlist* playlist, std::function<void(UnityEngine::Sprite*)> callback) {
-        getLogger().debug("Getting playlist cover %s", playlist->Title().c_str());
+        logger.debug("Getting playlist cover {}", playlist->Title());
         auto url = playlist->ImageURL();
         if (cachedPlaylistCovers.has(url)) {
             callback(cachedPlaylistCovers.get(url));
             return;
         }
         WebUtils::GetAsync(url, FILE_DOWNLOAD_TIMEOUT, [url, callback](long httpCode, std::string data) {
-            QuestUI::MainThreadScheduler::Schedule([bytes = std::vector<uint8_t>(data.begin(), data.end()), url, callback]() {
-                auto sprite = QuestUI::BeatSaberUI::VectorToSprite(bytes);
+            BSML::MainThreadScheduler::Schedule([bytes = std::vector<uint8_t>(data.begin(), data.end()), url, callback]() {
+                auto array = ArrayW<uint8_t>(bytes.size());
+                std::copy_n(bytes.begin(), bytes.size(), array.begin());
+                auto sprite = BSML::Utilities::LoadSpriteRaw(array);
                 cachedPlaylistCovers.add(url, sprite);
                 callback(sprite);
             });
         });
     }
     void GetSongCover(BeatSaver::Beatmap* song, std::function<void(UnityEngine::Sprite*)> callback) {
-        getLogger().debug("Getting song cover %s", song->GetName().c_str());
-        song->GetLatestCoverImageAsync([callback](std::vector<uint8_t> bytes) {
-            QuestUI::MainThreadScheduler::Schedule([bytes, callback]() {
-                auto sprite = QuestUI::BeatSaberUI::VectorToSprite(bytes);
-                callback(sprite);
-            });
-        }, nullptr);
+        logger.debug("Getting song cover {}", song->GetName());
+        song->GetLatestCoverImageAsync(
+            [callback](std::vector<uint8_t> bytes) {
+                BSML::MainThreadScheduler::Schedule([bytes, callback]() {
+                    auto array = ArrayW<uint8_t>(bytes.size());
+                    std::copy_n(bytes.begin(), bytes.size(), array.begin());
+                    auto sprite = BSML::Utilities::LoadSpriteRaw(array);
+                    callback(sprite);
+                });
+            },
+            nullptr);
     }
 
     bool SelectedPlaylistOwned() {
@@ -348,14 +346,14 @@ namespace Manager {
         return false;
     }
     void GetPlaylistFile(Playlist* playlist, std::function<void(PlaylistCore::BPList)> callback) {
-        getLogger().debug("Getting playlist file %s", playlist->Title().c_str());
+        logger.debug("Getting playlist file {}", playlist->Title());
         auto url = playlist->PlaylistURL();
         if (cachedPlaylists.has(url)) {
             callback(cachedPlaylists.get(url));
             return;
         }
         WebUtils::GetAsync(url, FILE_DOWNLOAD_TIMEOUT, [url, callback](long httpCode, std::string data) {
-            QuestUI::MainThreadScheduler::Schedule([data, url, callback]() {
+            BSML::MainThreadScheduler::Schedule([data, url, callback]() {
                 PlaylistCore::BPList list;
                 try {
                     ReadFromString(data, list);
@@ -364,8 +362,8 @@ namespace Manager {
                     auto& syncUrl = list.CustomData->SyncURL;
                     if (!syncUrl.has_value() || syncUrl->empty())
                         syncUrl = url;
-                } catch (const JSONException& exc) {
-                    getLogger().error("Failed to deserialize playlist %s: %s", data.c_str(), exc.what());
+                } catch (JSONException const& exc) {
+                    logger.error("Failed to deserialize playlist {}: {}", data, exc.what());
                     return;
                 }
                 cachedPlaylists.add(url, list);

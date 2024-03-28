@@ -1,66 +1,67 @@
-#include "main.hpp"
-#include "manager.hpp"
-#include "assets.hpp"
-#include "config.hpp"
 #include "customtypes/filtermenu.hpp"
 
-#include "bsml/shared/BSML.hpp"
-#include "questui/shared/BeatSaberUI.hpp"
-
-#include "UnityEngine/UI/Toggle.hpp"
 #include "HMUI/AnimatedSwitchView.hpp"
+#include "UnityEngine/UI/Toggle.hpp"
+#include "assets.hpp"
+#include "bsml/shared/BSML.hpp"
+#include "bsml/shared/Helpers/creation.hpp"
+#include "bsml/shared/Helpers/utilities.hpp"
+#include "config.hpp"
+#include "main.hpp"
+#include "manager.hpp"
 
 DEFINE_TYPE(PlaylistDownloader, FilterMenu);
 
 using namespace PlaylistDownloader;
 
 void InstantSetToggle(UnityEngine::UI::Toggle* toggle, bool value) {
-    if(toggle->m_IsOn == value)
+    if (toggle->m_IsOn == value)
         return;
     toggle->m_IsOn = value;
     auto animatedSwitch = toggle->GetComponent<HMUI::AnimatedSwitchView*>();
     animatedSwitch->HandleOnValueChanged(value);
-    animatedSwitch->switchAmount = value;
+    animatedSwitch->_switchAmount = value;
     animatedSwitch->LerpPosition(value);
-    animatedSwitch->LerpColors(value, animatedSwitch->highlightAmount, animatedSwitch->disabledAmount);
+    animatedSwitch->LerpColors(value, animatedSwitch->_highlightAmount, animatedSwitch->_disabledAmount);
 }
 
 void FilterMenu::OnEnable() {
-    set_name("PlaylistFilters");
-    get_rectTransform()->set_anchorMin({0.5, 0.5});
-    get_rectTransform()->set_anchorMax({0.5, 0.5});
-    get_rectTransform()->set_sizeDelta({160, 15});
+    name = "PlaylistFilters";
+    rectTransform->anchorMin = {0.5, 0.5};
+    rectTransform->anchorMax = {0.5, 0.5};
+    rectTransform->sizeDelta = {160, 15};
 }
 
 void FilterMenu::DidActivate(bool firstActivation, bool addedToHierarchy, bool screenSystemEnabling) {
     if (firstActivation) {
         SetupBSMLFields();
         // AddHotReload(this, "filtermenu");
-        BSML::parse_and_construct(IncludedAssets::filtermenu_bsml, get_transform(), this);
+        BSML::parse_and_construct(IncludedAssets::filtermenu_bsml, transform, this);
     }
 }
 
 void FilterMenu::SetupBSMLFields() {
     using Item = HMUI::IconSegmentedControl::DataItem;
-    sourceIconData = List<Item*>::New_ctor(3);
+    sourceIconData = ListW<Item*>::New(4);
     sourceIconData->Add(Item::New_ctor(PNG_SPRITE(BeatSaver), "BeatSaver"));
     sourceIconData->Add(Item::New_ctor(PNG_SPRITE(Hitbloq), "Hitbloq"));
     sourceIconData->Add(Item::New_ctor(PNG_SPRITE(AccSaber), "AccSaber"));
     sourceIconData->Add(Item::New_ctor(PNG_SPRITE(BeatLeader), "BeatLeader"));
-    sorts = List<StringW>::New_ctor(4);
+    sorts = ListW<StringW>::New(sortOptions.size());
     for (auto sort : sortOptions)
         sorts->Add(sort);
 }
 
 void FilterMenu::PostParse() {
-    auto searchInput = QuestUI::BeatSaberUI::CreateStringSetting(filterBar, "Search", "", {}, {0, -35, 0}, [this](StringW value) { stringInput(value); });
-    searchInput->get_transform()->SetSiblingIndex(1);
-    sourceIconControl->hideCellBackground = false;
-    sourceIconControl->overrideCellSize = true;
-    sourceIconControl->iconSize = 6;
-    sourceIconControl->padding = 2;
+    auto searchInput = BSML::Lite::CreateStringSetting(filterBar, "Search", "", {}, {0, -35, 0}, [this](StringW value) { stringInput(value); });
+    searchInput->transform->SetSiblingIndex(1);
+    sourceIconControl->_hideCellBackground = false;
+    sourceIconControl->_overrideCellSize = true;
+    sourceIconControl->_iconSize = 6;
+    sourceIconControl->_padding = 2;
     sourceIconControl->ReloadData();
-    Manager::SetSource(sourceIconControl->get_selectedCellNumber());
+    Manager::SetSource(sourceIconControl->selectedCellNumber);
+    Manager::SetSource(0);
     filterModal->Hide(false, nullptr);
     InstantSetToggle(curatedToggle->toggle, getConfig().curated.GetValue());
     InstantSetToggle(includeEmptyToggle->toggle, getConfig().includeEmpty.GetValue());
@@ -78,23 +79,23 @@ void FilterMenu::OnDestroy() {
 
 FilterMenu* FilterMenu::GetInstance() {
     if (!instance)
-        instance = QuestUI::BeatSaberUI::CreateViewController<FilterMenu*>();
+        instance = BSML::Helpers::CreateViewController<FilterMenu*>();
     return instance;
 }
 
 void FilterMenu::sourceSelected(HMUI::SegmentedControl* control, int cell) {
-    getLogger().info("Source %i selected", cell);
+    logger.info("Source {} selected", cell);
     Manager::SetSource(cell);
-    filterButton->get_gameObject()->SetActive(SourceHasFilters(cell));
+    filterButton->gameObject->SetActive(SourceHasFilters(cell));
 }
 
 void FilterMenu::stringInput(StringW value) {
-    getLogger().info("String %s input", value.operator std::string().c_str());
+    logger.info("String {} input", value);
     Manager::SetSearch(value);
 }
 
 void FilterMenu::filterClicked() {
-    getLogger().info("Filter button clicked");
+    logger.info("Filter button clicked");
     filterModal->Show(true, false, nullptr);
 }
 
