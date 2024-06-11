@@ -8,7 +8,6 @@
 #include "manager.hpp"
 #include "playlistcore/shared/PlaylistCore.hpp"
 #include "songcore/shared/SongCore.hpp"
-#include "songdownloader/shared/BeatSaverAPI.hpp"
 
 DEFINE_TYPE(PlaylistDownloader, PlaylistDetail);
 
@@ -110,6 +109,8 @@ void PlaylistDetail::Refresh(bool full) {
             if (playlist != Manager::GetSelectedPlaylist() || this != PlaylistDetail::instance)
                 return;
 
+            logger.debug("got song cover {} {}", songData[i]->text, cover != nullptr);
+
             songData[i]->icon = cover;
             list->tableView->RefreshCellsContent();
         });
@@ -132,7 +133,8 @@ void PlaylistDetail::UpdateDownloadButtons() {
 
     bool active = !Manager::SelectedPlaylistOwned();
     // set inactive during download
-    if (downloadProgress->gameObject->active) active = false;
+    if (downloadProgress->gameObject->active)
+        active = false;
     download->interactable = active;
     downloadSongs->interactable = active;
 }
@@ -164,8 +166,9 @@ void PlaylistDetail::downloadClicked() {
 
     SetDownloading(true);
 
-    Manager::GetPlaylistFile(playlist, [this](PlaylistCore::BPList file) {
-        PlaylistCore::AddPlaylist(file);
+    Manager::GetPlaylistFile(playlist, [this](std::optional<PlaylistCore::BPList> file) {
+        if (file)
+            PlaylistCore::AddPlaylist(*file);
         SetDownloading(false);
     });
 }
@@ -177,15 +180,19 @@ void PlaylistDetail::downloadSongsClicked() {
 
     SetDownloading(true);
 
-    Manager::GetPlaylistFile(playlist, [this](PlaylistCore::BPList file) {
+    Manager::GetPlaylistFile(playlist, [this](std::optional<PlaylistCore::BPList> file) {
         if (this != PlaylistDetail::instance)
             return;
-        auto [_, playlist] = PlaylistCore::AddPlaylist(file);
+        if (!file) {
+            SetDownloading(false);
+            return;
+        }
+        auto [_, playlist] = PlaylistCore::AddPlaylist(*file);
 
         downloadProgress->subText1->text = "0 / 0";
         downloadProgress->SetProgress(0);
 
-        BeatSaver::API::DownloadMissingSongsFromPlaylist(
+        PlaylistCore::DownloadMissingSongsFromPlaylist(
             playlist,
             [this]() {
                 BSML::MainThreadScheduler::Schedule([this]() {
@@ -195,7 +202,7 @@ void PlaylistDetail::downloadSongsClicked() {
                     SetDownloading(false);
                 });
             },
-            [this](int progress, int total) {
+            [this](int total, int progress) {
                 BSML::MainThreadScheduler::Schedule([this, progress, total]() {
                     if (this != PlaylistDetail::instance)
                         return;

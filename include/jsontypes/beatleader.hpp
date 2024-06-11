@@ -7,6 +7,7 @@ DECLARE_JSON_CLASS(BeatLeaderPlaylist,
 
     VALUE(int, playlistId);
     VALUE(std::string, image);
+    VALUE(bool, downloadable);
     DISCARD_EXTRA_FIELDS
 )
 

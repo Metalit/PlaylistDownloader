@@ -3,7 +3,7 @@
 #include "UnityEngine/Sprite.hpp"
 #include "apis.hpp"
 #include "playlistcore/shared/Types/BPList.hpp"
-#include "songdownloader/shared/BeatSaverAPI.hpp"
+#include "beatsaverplusplus/shared/BeatSaver.hpp"
 
 namespace Manager {
 
@@ -30,11 +30,11 @@ namespace Manager {
     Playlist* GetSelectedPlaylist();
 
     void RequestMoreSongs();
-    std::vector<BeatSaver::Beatmap*> GetSongs();
+    std::vector<BeatSaver::Models::Beatmap*> GetSongs();
 
     void GetPlaylistCover(Playlist* playlist, std::function<void(UnityEngine::Sprite*)> callback);
-    void GetSongCover(BeatSaver::Beatmap* song, std::function<void(UnityEngine::Sprite*)> callback);
+    void GetSongCover(BeatSaver::Models::Beatmap* song, std::function<void(UnityEngine::Sprite*)> callback);
 
     bool SelectedPlaylistOwned();
-    void GetPlaylistFile(Playlist* playlist, std::function<void(PlaylistCore::BPList)> callback);
+    void GetPlaylistFile(Playlist* playlist, std::function<void(std::optional<PlaylistCore::BPList>)> callback);
 };

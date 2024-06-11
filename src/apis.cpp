@@ -1,12 +1,12 @@
-#include "main.hpp"
-#include "config.hpp"
 #include "apis.hpp"
-#include "webutil.hpp"
 
+#include "config.hpp"
 #include "jsontypes/accsaber.hpp"
-#include "jsontypes/beatsaver.hpp"
 #include "jsontypes/beatleader.hpp"
+#include "jsontypes/beatsaver.hpp"
 #include "jsontypes/hitbloq.hpp"
+#include "main.hpp"
+#include "web-utils/shared/WebUtils.hpp"
 
 inline std::string lower(std::string str) {
     std::string ret = str;
@@ -14,18 +14,27 @@ inline std::string lower(std::string str) {
     return ret;
 }
 
+template <class T>
+void GetAsync(WebUtils::URLOptions url, std::function<void(T)> onResponse) {
+    WebUtils::GetAsync<WebUtils::StringResponse>(url, [onResponse = std::move(onResponse), url = url.fullURl()](WebUtils::StringResponse response) {
+        if (!response.responseData || !response.IsSuccessful())
+            logger.error("{} request failed: {} {}", url, response.httpCode, response.curlStatus);
+        T ret;
+        try {
+            ReadFromString(*response.responseData, ret);
+        } catch (JSONException const& exc) {
+            logger.error("{} deserialize failed \"{}\": {}", url, *response.responseData, exc.what());
+        }
+        onResponse(ret);
+    });
+}
+
 void GetAccSaberPlaylists(std::function<void(std::vector<std::unique_ptr<Playlist>> playlists)> callback, int page, std::string search) {
     if (page > 0)
         return;
-    WebUtils::GetAsync("https://api.accsaber.com/playlists", [search = lower(search), callback](long httpCode, std::string data) {
-        AccSaberResponse resp;
-        try {
-            ReadFromString(data, resp);
-        } catch (const JSONException& exc) {
-            logger.error("Failed to deserialize accsaber response {}: {}", data, exc.what());
-        }
+    GetAsync<AccSaberResponse>({"https://api.accsaber.com/playlists"}, [search = lower(search), callback](auto response) {
         std::vector<std::unique_ptr<Playlist>> ret = {};
-        for (auto& playlist : resp.Playlists) {
+        for (auto& playlist : response.Playlists) {
             if (search.empty() || lower(playlist.displayName).find(search) != std::string::npos)
                 ret.emplace_back(std::make_unique<AccSaberPlaylistWrapper>(playlist));
         }
@@ -36,20 +45,16 @@ void GetAccSaberPlaylists(std::function<void(std::vector<std::unique_ptr<Playlis
 void GetBeatSaverPlaylists(std::function<void(std::vector<std::unique_ptr<Playlist>> playlists)> callback, int page, std::string search) {
     std::string url = "https://api.beatsaver.com/playlists/search/";
     url += std::to_string(page);
-    url += std::string("?curated=") + (getConfig().curated.GetValue() ? "true" : "false");
-    url += std::string("&includeEmpty=") + (getConfig().includeEmpty.GetValue() ? "true" : "false");
-    url += "&sortOrder=" + getConfig().sort.GetValue();
+    std::unordered_map<std::string, std::string> queries;
+    queries["curated"] = getConfig().curated.GetValue() ? "true" : "false";
+    queries["includeEmpty"] = getConfig().includeEmpty.GetValue() ? "true" : "false";
+    queries["sortOrder"] = getConfig().sort.GetValue();
     if (!search.empty())
-        url += "&q=" + search;
-    WebUtils::GetAsync(url, [callback](long httpCode, std::string data) {
-        BeatSaverResponse resp;
-        try {
-            ReadFromString(data, resp);
-        } catch (const JSONException& exc) {
-            logger.error("Failed to deserialize beatsaver response {}: {}", data, exc.what());
-        }
+        queries["search"] = search;
+    logger.debug("will get {}", url);
+    GetAsync<BeatSaverResponse>({url, queries}, [callback](auto response) {
         std::vector<std::unique_ptr<Playlist>> ret = {};
-        for (auto& playlist : resp.Playlists)
+        for (auto& playlist : response.Playlists)
             ret.emplace_back(std::make_unique<BeatSaverPlaylistWrapper>(playlist));
         callback(std::move(ret));
     });
@@ -57,19 +62,16 @@ void GetBeatSaverPlaylists(std::function<void(std::vector<std::unique_ptr<Playli
 
 void GetBeatLeaderPlaylists(std::function<void(std::vector<std::unique_ptr<Playlist>> playlists)> callback, int page, std::string search) {
     std::string url = "https://api.beatleader.xyz/events";
-    url += "?page=" + std::to_string(page + 1);
+    std::unordered_map<std::string, std::string> queries;
+    queries["page"] = std::to_string(page + 1);
     if (!search.empty())
-        url += "&search=" + search;
-    WebUtils::GetAsync(url, [callback](long httpCode, std::string data) {
-        BeatLeaderResponse resp;
-        try {
-            ReadFromString(data, resp);
-        } catch (const JSONException& exc) {
-            logger.error("Failed to deserialize beatleader response {}: {}", data, exc.what());
-        }
+        queries["search"] = search;
+    GetAsync<BeatLeaderResponse>({url, queries}, [callback](auto response) {
         std::vector<std::unique_ptr<Playlist>> ret = {};
-        for (auto& playlist : resp.Playlists)
-            ret.emplace_back(std::make_unique<BeatLeaderPlaylistWrapper>(playlist));
+        for (auto& playlist : response.Playlists) {
+            if (playlist.downloadable)
+                ret.emplace_back(std::make_unique<BeatLeaderPlaylistWrapper>(playlist));
+        }
         callback(std::move(ret));
     });
 }
@@ -78,17 +80,12 @@ void GetHitbloqPlaylists(std::function<void(std::vector<std::unique_ptr<Playlist
     if (page > 0)
         return;
     std::string url = "https://hitbloq.com/api/map_pools_detailed";
+    std::unordered_map<std::string, std::string> queries;
     if (!search.empty())
-        url += "?search=" + search;
-    WebUtils::GetAsync(url, [callback](long httpCode, std::string data) {
-        HitbloqResponse resp;
-        try {
-            ReadFromString(data, resp);
-        } catch (const JSONException& exc) {
-            logger.error("Failed to deserialize hitbloq response {}: {}", data, exc.what());
-        }
+        queries["search"] = search;
+    GetAsync<HitbloqResponse>({url, queries}, [callback](auto response) {
         std::vector<std::unique_ptr<Playlist>> ret = {};
-        for (auto& playlist : resp.Playlists)
+        for (auto& playlist : response.Playlists)
             ret.emplace_back(std::make_unique<HitbloqPlaylistWrapper>(playlist));
         callback(std::move(ret));
     });

@@ -53,7 +53,7 @@ void FilterMenu::SetupBSMLFields() {
 }
 
 void FilterMenu::PostParse() {
-    auto searchInput = BSML::Lite::CreateStringSetting(filterBar, "Search", "", {}, {0, -35, 0}, [this](StringW value) { stringInput(value); });
+    auto searchInput = BSML::Lite::CreateStringSetting(filterBar, "Search", "", {}, {0, -40, 0}, [this](StringW value) { stringInput(value); });
     searchInput->transform->SetSiblingIndex(1);
     sourceIconControl->_hideCellBackground = false;
     sourceIconControl->_overrideCellSize = true;
@@ -90,7 +90,7 @@ void FilterMenu::sourceSelected(HMUI::SegmentedControl* control, int cell) {
 }
 
 void FilterMenu::stringInput(StringW value) {
-    logger.info("String {} input", value);
+    logger.info("String \"{}\" input", value);
     Manager::SetSearch(value);
 }
 

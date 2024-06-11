@@ -8,11 +8,12 @@
 #include "customtypes/playlistlist.hpp"
 #include "main.hpp"
 #include "playlistcore/shared/PlaylistCore.hpp"
-#include "webutil.hpp"
+#include "playlistcore/shared/Utils.hpp"
+#include "web-utils/shared/WebUtils.hpp"
 
 using namespace PlaylistDownloader;
 
-#define FILE_DOWNLOAD_TIMEOUT 64
+// more than 50 will be invalid for one beatsaver api call
 #define PLAYLIST_SONGS_PAGE_SIZE 10
 
 // https://gist.github.com/jagt/5797948
@@ -109,6 +110,14 @@ struct dumb_function_copyable {
     T arg;
 };
 
+struct CallbackSpriteRequest : WebUtils::GenericRequest<WebUtils::SpriteResponse> {
+    CallbackSpriteRequest(std::string url, std::function<void(UnityEngine::Sprite*)> callback) : GenericRequest({url}), callback(callback) {
+        this->url.noEscape = true;
+    }
+    std::function<void(UnityEngine::Sprite*)> callback;
+    int retriesLeft = 2;
+};
+
 namespace Manager {
     int source = -1;
     int page = 0;
@@ -123,9 +132,9 @@ namespace Manager {
     int receivedSongsPages = 0;
     bool songsDone = false;
 
-    std::vector<std::optional<BeatSaver::Beatmap>> songs = {};
+    std::vector<std::optional<BeatSaver::Models::Beatmap>> songs = {};
 
-    cache<std::string, UnityEngine::Sprite*, 20> cachedPlaylistCovers = {};
+    cache<std::string, UnityEngine::Sprite*, 50> cachedPlaylistCovers = {};
     cache<std::string, PlaylistCore::BPList, 100> cachedPlaylists = {};
 
     void Refresh() {
@@ -156,7 +165,7 @@ namespace Manager {
     }
 
     void SetSearch(std::string value) {
-        logger.debug("Searching {}", value);
+        logger.debug("Searching \"{}\"", value);
         if (value == search)
             return;
         search = value;
@@ -173,7 +182,7 @@ namespace Manager {
         if (page > receivedPages || done)
             return;
         bool firstRequest = page == 0;
-        logger.info("Requesting playlists from {} search {}", source, search);
+        logger.info("Requesting playlists from {} search \"{}\"", source, search);
         auto callback = [pastState = GetState(), firstRequest](std::vector<std::unique_ptr<Playlist>> newPlaylists) mutable {
             using capture_fix = dumb_function_copyable<std::vector<std::unique_ptr<Playlist>>>;
             auto arg = capture_fix(std::move(newPlaylists));
@@ -246,10 +255,10 @@ namespace Manager {
         if (!playlist || songsPage > receivedSongsPages || songsDone)
             return;
         logger.debug("Getting playlist songs {} page {}", playlist->Title(), songsPage);
-        auto callback = [currentPage = songsPage, playlist](PlaylistCore::BPList downloaded) {
-            if (playlist != GetSelectedPlaylist())
+        auto callback = [currentPage = songsPage, playlist](std::optional<PlaylistCore::BPList> downloaded) {
+            if (playlist != GetSelectedPlaylist() || !downloaded)
                 return;
-            auto& bpSongs = downloaded.Songs;
+            auto& bpSongs = downloaded->Songs;
             int start = PLAYLIST_SONGS_PAGE_SIZE * currentPage;
             int end = PLAYLIST_SONGS_PAGE_SIZE * (currentPage + 1);
             end = std::min(end, (int) bpSongs.size());
@@ -261,39 +270,58 @@ namespace Manager {
                 PlaylistDetail::GetInstance()->Refresh(false);
                 return;
             }
-            auto foundCount = new std::atomic_int(0);
-            auto foundMaps = new std::vector<std::optional<BeatSaver::Beatmap>>(count);
-            for (int i = start; i < end; i++) {
-                logger.debug("Getting playlist song {} / {}", i, bpSongs.size());
-                BeatSaver::API::GetBeatmapByHashAsync(
-                    bpSongs[i].Hash, [foundCount, foundMaps, i, count, start, playlist](std::optional<BeatSaver::Beatmap> map) {
-                        foundMaps->at(i - start) = map;
-                        int newCount = foundCount->fetch_add(1) + 1;
-                        if (map.has_value())
-                            logger.debug("Got playlist song {} total {} / {}", i, newCount, count);
-                        else
-                            logger.debug("Failed to get playlist song {} total {} / {}", i, newCount, count);
-                        if (newCount == count) {
-                            if (playlist == GetSelectedPlaylist()) {
-                                BSML::MainThreadScheduler::Schedule([maps = *foundMaps]() {
-                                    for (auto& map : maps)
-                                        songs.push_back(map);
-                                    receivedSongsPages++;
-                                    PlaylistDetail::GetInstance()->SetLoading(false);
-                                    PlaylistDetail::GetInstance()->Refresh(false);
-                                });
-                            }
-                            delete foundCount;
-                            delete foundMaps;
-                        }
+            std::vector<std::string> hashes(count);
+            for (int i = start; i < end; i++)
+                hashes.emplace_back(PlaylistCore::Utils::GetLevelHash(bpSongs[i].LevelID));
+            auto onGet = [hashes, playlist](BeatSaver::API::BeatmapMapResponse response) {
+                if (playlist != GetSelectedPlaylist())
+                    return;
+                if (!response.responseData) {
+                    logger.error("Failed to get beatmaps {} {}", response.httpCode, response.curlStatus);
+                    BSML::MainThreadScheduler::Schedule([playlist]() {
+                        if (playlist != GetSelectedPlaylist())
+                            return;
+                        // don't increment page if it fails
+                        PlaylistDetail::GetInstance()->SetLoading(false);
+                        PlaylistDetail::GetInstance()->Refresh(false);
                     });
-            }
+                    return;
+                }
+                std::vector<std::optional<BeatSaver::Models::Beatmap>> maps;
+                for (auto& hash : hashes) {
+                    bool found = false;
+                    // iterate to not have to worry about case
+                    for (auto& [_, map] : *response.responseData) {
+                        for (auto& version : map.Versions) {
+                            if (PlaylistCore::Utils::CaseInsensitiveEquals(version.Hash, hash)) {
+                                found = true;
+                                maps.emplace_back(map);
+                                break;
+                            }
+                        }
+                        if (found)
+                            break;
+                    }
+                    if (!found)
+                        maps.emplace_back(std::nullopt);
+                }
+                BSML::MainThreadScheduler::Schedule([playlist, maps]() {
+                    if (playlist != GetSelectedPlaylist())
+                        return;
+                    for (auto& map : maps)
+                        songs.push_back(map);
+                    receivedSongsPages++;
+                    PlaylistDetail::GetInstance()->SetLoading(false);
+                    PlaylistDetail::GetInstance()->Refresh(false);
+                });
+            };
+            BEATSAVER_PLUSPLUS_GET_ASYNC(BeatSaver::API::GetBeatmapsByHashesURLOptions, onGet, hashes);
         };
         GetPlaylistFile(playlist, callback);
         songsPage++;
     }
-    std::vector<BeatSaver::Beatmap*> GetSongs() {
-        std::vector<BeatSaver::Beatmap*> ret = {};
+    std::vector<BeatSaver::Models::Beatmap*> GetSongs() {
+        std::vector<BeatSaver::Models::Beatmap*> ret = {};
         ret.reserve(songs.size());
 
         for (auto& song : songs) {
@@ -303,6 +331,47 @@ namespace Manager {
         return ret;
     }
 
+    void GetSprite(std::string url, std::function<void(UnityEngine::Sprite*)> callback) {
+        using Retry = WebUtils::RatelimitedDispatcher::RetryOptions;
+        static WebUtils::RatelimitedDispatcher spriteGetter;
+        static bool initialized = false;
+        static std::map<std::string, CallbackSpriteRequest*> awaitingSprites;
+        if (!initialized) {
+            initialized = true;
+            spriteGetter.maxConcurrentRequests = 4;
+            spriteGetter.rateLimitTime = std::chrono::milliseconds(100);
+            spriteGetter.onRequestFinished = [](bool success, WebUtils::IRequest* request) -> std::optional<Retry> {
+                auto cast = dynamic_cast<CallbackSpriteRequest*>(request);
+                if (!cast)
+                    return std::nullopt;
+
+                auto response = cast->targetResponse;
+                auto sprite = response.responseData.value_or(nullptr).unsafePtr();
+                if (!sprite) {
+                    logger.error("failed to download sprite from {}: {} {}", cast->url.fullURl(), response.httpCode, response.curlStatus);
+                    if (0 < cast->retriesLeft--)
+                        return Retry(std::chrono::milliseconds(100));
+                }
+                // technically, the url should be removed from awaitingSprites here with a lock
+                BSML::MainThreadScheduler::Schedule([callback = std::move(cast->callback), url = cast->url.url, sprite]() {
+                    if (callback)
+                        callback(sprite);
+                    // no lock needed if on main thread
+                    awaitingSprites.erase(url);
+                });
+
+                return std::nullopt;
+            };
+        }
+        if (!awaitingSprites.contains(url)) {
+            auto request = std::make_unique<CallbackSpriteRequest>(url, callback);
+            awaitingSprites[url] = request.get();
+            spriteGetter.AddRequest(std::move(request));
+            spriteGetter.StartDispatchIfNeeded();
+        } else
+            awaitingSprites[url]->callback = callback;
+    }
+
     void GetPlaylistCover(Playlist* playlist, std::function<void(UnityEngine::Sprite*)> callback) {
         logger.debug("Getting playlist cover {}", playlist->Title());
         auto url = playlist->ImageURL();
@@ -310,28 +379,17 @@ namespace Manager {
             callback(cachedPlaylistCovers.get(url));
             return;
         }
-        WebUtils::GetAsync(url, FILE_DOWNLOAD_TIMEOUT, [url, callback](long httpCode, std::string data) {
-            BSML::MainThreadScheduler::Schedule([bytes = std::vector<uint8_t>(data.begin(), data.end()), url, callback]() {
-                auto array = ArrayW<uint8_t>(bytes.size());
-                std::copy_n(bytes.begin(), bytes.size(), array.begin());
-                auto sprite = BSML::Utilities::LoadSpriteRaw(array);
+        callback = [url, callback = std::move(callback)](UnityEngine::Sprite* sprite) {
+            if (sprite)
                 cachedPlaylistCovers.add(url, sprite);
-                callback(sprite);
-            });
-        });
+            callback(sprite);
+        };
+        GetSprite(url, callback);
     }
-    void GetSongCover(BeatSaver::Beatmap* song, std::function<void(UnityEngine::Sprite*)> callback) {
+    void GetSongCover(BeatSaver::Models::Beatmap* song, std::function<void(UnityEngine::Sprite*)> callback) {
         logger.debug("Getting song cover {}", song->GetName());
-        song->GetLatestCoverImageAsync(
-            [callback](std::vector<uint8_t> bytes) {
-                BSML::MainThreadScheduler::Schedule([bytes, callback]() {
-                    auto array = ArrayW<uint8_t>(bytes.size());
-                    std::copy_n(bytes.begin(), bytes.size(), array.begin());
-                    auto sprite = BSML::Utilities::LoadSpriteRaw(array);
-                    callback(sprite);
-                });
-            },
-            nullptr);
+        std::string url = song->Versions.front().CoverURL;
+        GetSprite(url, callback);
     }
 
     bool SelectedPlaylistOwned() {
@@ -347,25 +405,31 @@ namespace Manager {
         }
         return false;
     }
-    void GetPlaylistFile(Playlist* playlist, std::function<void(PlaylistCore::BPList)> callback) {
+    void GetPlaylistFile(Playlist* playlist, std::function<void(std::optional<PlaylistCore::BPList>)> callback) {
         logger.debug("Getting playlist file {}", playlist->Title());
         auto url = playlist->PlaylistURL();
         if (cachedPlaylists.has(url)) {
             callback(cachedPlaylists.get(url));
             return;
         }
-        WebUtils::GetAsync(url, FILE_DOWNLOAD_TIMEOUT, [url, callback](long httpCode, std::string data) {
-            BSML::MainThreadScheduler::Schedule([data, url, callback]() {
+        WebUtils::GetAsync<WebUtils::StringResponse>({url}, [url, callback](WebUtils::StringResponse response) {
+            BSML::MainThreadScheduler::Schedule([response, url, callback]() {
+                if (!response.responseData) {
+                    logger.error("Get playlist file failed {} {}", response.httpCode, response.curlStatus);
+                    callback(std::nullopt);
+                    return;
+                }
                 PlaylistCore::BPList list;
                 try {
-                    ReadFromString(data, list);
+                    ReadFromString(*response.responseData, list);
                     if (!list.CustomData.has_value())
                         list.CustomData.emplace();
                     auto& syncUrl = list.CustomData->SyncURL;
                     if (!syncUrl.has_value() || syncUrl->empty())
                         syncUrl = url;
                 } catch (JSONException const& exc) {
-                    logger.error("Failed to deserialize playlist {}: {}", data, exc.what());
+                    logger.error("Failed to deserialize playlist {}: {}", *response.responseData, exc.what());
+                    callback(std::nullopt);
                     return;
                 }
                 cachedPlaylists.add(url, list);

@@ -86,6 +86,8 @@ void PlaylistList::Refresh(bool full) {
             if (state != Manager::GetState() || this != PlaylistList::instance)
                 return;
 
+            logger.debug("got playlist cover {}", i);
+
             playlistData[i]->icon = cover;
             list->tableView->RefreshCellsContent();
         });
