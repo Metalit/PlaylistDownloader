@@ -6,7 +6,6 @@
 #include "bsml/shared/Helpers/creation.hpp"
 #include "main.hpp"
 #include "manager.hpp"
-#include "playlistcore/shared/PlaylistCore.hpp"
 #include "songcore/shared/SongCore.hpp"
 
 DEFINE_TYPE(PlaylistDownloader, PlaylistDetail);
@@ -36,7 +35,7 @@ void PlaylistDetail::SetupBSMLFields() {
 
 void PlaylistDetail::PostParse() {
     list->tableView->selectionType = HMUI::TableViewSelectionType::None;
-    downloadProgress = BSML::Lite::CreateProgressBar({-1.4, 3.1, 4}, "Downloading Songs...", "0 / 0", "PlaylistDownloader");
+    downloadProgress = BSML::Lite::CreateProgressBar({-1.4, 3.1, 4}, "Downloading Songs...", "", "PlaylistDownloader");
     downloadProgress->gameObject->active = false;
 
     auto delegate = custom_types::MakeDelegate<System::Action_1<float>*>((std::function<void(float)>) [this](float position) {
@@ -128,15 +127,26 @@ void PlaylistDetail::UpdateScrollView() {
 }
 
 void PlaylistDetail::UpdateDownloadButtons() {
-    if (!download || !downloadSongs)
+    if (!download || !downloadSongs || !update || !updateSongs)
         return;
 
-    bool active = !Manager::SelectedPlaylistOwned();
-    // set inactive during download
-    if (downloadProgress->gameObject->active)
-        active = false;
-    download->interactable = active;
-    downloadSongs->interactable = active;
+    bool owned = Manager::SelectedPlaylistOwned();
+    download->gameObject->active = !owned;
+    downloadSongs->gameObject->active = !owned;
+    update->gameObject->active = owned;
+    updateSongs->gameObject->active = owned;
+    // set uninteractable during download
+    bool downloading = downloadProgress->gameObject->active;
+    download->interactable = !downloading;
+    downloadSongs->interactable = !downloading;
+    update->interactable = !downloading;
+    updateSongs->interactable = !downloading;
+    // explain why uninteractable
+    auto hover = downloading ? "Waiting for download..." : "";
+    download->GetComponent<HMUI::HoverHint*>()->text = hover;
+    downloadSongs->GetComponent<HMUI::HoverHint*>()->text = hover;
+    update->GetComponent<HMUI::HoverHint*>()->text = hover;
+    updateSongs->GetComponent<HMUI::HoverHint*>()->text = hover;
 }
 
 void PlaylistDetail::SetLoading(bool value) {
@@ -152,11 +162,11 @@ void PlaylistDetail::SetDownloading(bool value) {
     if (!download || !downloadSongs || !downloadProgress)
         return;
     downloadProgress->gameObject->active = value;
+    if (value) {
+        downloadProgress->subText1->text = "Waiting for file...";
+        downloadProgress->SetProgress(0);
+    }
     UpdateDownloadButtons();
-
-    auto hover = value ? "Waiting for download..." : "";
-    download->GetComponent<HMUI::HoverHint*>()->text = hover;
-    downloadSongs->GetComponent<HMUI::HoverHint*>()->text = hover;
 }
 
 void PlaylistDetail::downloadClicked() {
@@ -189,26 +199,75 @@ void PlaylistDetail::downloadSongsClicked() {
         }
         auto [_, playlist] = PlaylistCore::AddPlaylist(*file);
 
+        DownloadMissingSongs(playlist);
+    });
+}
+
+void PlaylistDetail::updateClicked() {
+    auto playlist = Manager::GetSelectedPlaylist();
+    auto target = Manager::SelectedPlaylistOwned();
+    if (!playlist || !target)
+        return;
+
+    SetDownloading(true);
+
+    Manager::GetPlaylistFile(playlist, [this, target](std::optional<PlaylistCore::BPList> file) {
+        if (file) {
+            target->playlistJSON = *file;
+            target->Save();
+            PlaylistCore::MarkPlaylistForReload(target);
+            PlaylistCore::ReloadPlaylists();
+        }
+        SetDownloading(false);
+    });
+}
+
+void PlaylistDetail::updateSongsClicked() {
+    auto playlist = Manager::GetSelectedPlaylist();
+    auto target = Manager::SelectedPlaylistOwned();
+    if (!playlist || !target)
+        return;
+
+    SetDownloading(true);
+
+    Manager::GetPlaylistFile(playlist, [this, target](std::optional<PlaylistCore::BPList> file) {
+        if (this != PlaylistDetail::instance)
+            return;
+        if (!file) {
+            SetDownloading(false);
+            return;
+        }
+        target->playlistJSON = *file;
+        target->Save();
+        PlaylistCore::MarkPlaylistForReload(target);
+        PlaylistCore::ReloadPlaylists();
+
+        DownloadMissingSongs(target);
+    });
+}
+
+void PlaylistDetail::DownloadMissingSongs(PlaylistCore::Playlist* playlist) {
+    if (downloadProgress) {
         downloadProgress->subText1->text = "0 / 0";
         downloadProgress->SetProgress(0);
+    }
 
-        PlaylistCore::DownloadMissingSongsFromPlaylist(
-            playlist,
-            [this]() {
-                BSML::MainThreadScheduler::Schedule([this]() {
-                    if (this != PlaylistDetail::instance)
-                        return;
-                    SongCore::API::Loading::RefreshSongs(false);
-                    SetDownloading(false);
-                });
-            },
-            [this](int total, int progress) {
-                BSML::MainThreadScheduler::Schedule([this, progress, total]() {
-                    if (this != PlaylistDetail::instance)
-                        return;
-                    downloadProgress->subText1->text = fmt::format("{} / {}", progress, total);
-                    downloadProgress->SetProgress(progress / (float) total);
-                });
+    PlaylistCore::DownloadMissingSongsFromPlaylist(
+        playlist,
+        [this]() {
+            BSML::MainThreadScheduler::Schedule([this]() {
+                if (this != PlaylistDetail::instance)
+                    return;
+                SongCore::API::Loading::RefreshSongs(false);
+                SetDownloading(false);
             });
-    });
+        },
+        [this](int total, int progress) {
+            BSML::MainThreadScheduler::Schedule([this, progress, total]() {
+                if (this != PlaylistDetail::instance)
+                    return;
+                downloadProgress->subText1->text = fmt::format("{} / {}", progress, total);
+                downloadProgress->SetProgress(progress / (float) total);
+            });
+        });
 }

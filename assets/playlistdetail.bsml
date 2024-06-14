@@ -16,6 +16,8 @@
             <horizontal horizontal-fit="PreferredSize" spacing="2">
                 <button id="download" text="Download" on-click="downloadClicked" pref-height="10" pref-width="18" hover-hint=""/>
                 <button id="downloadSongs" text="Download + Songs" on-click="downloadSongsClicked" pref-height="10" pref-width="30" hover-hint=""/>
+                <button id="update" text="Update" on-click="updateClicked" pref-height="10" pref-width="18" hover-hint="" active="false"/>
+                <button id="updateSongs" text="Update + Songs" on-click="updateSongsClicked" pref-height="10" pref-width="30" hover-hint="" active="false"/>
             </horizontal>
         </vertical>
         <horizontal size-delta-x="65" child-expand-width="false" child-control-width="false" child-align="MiddleCenter">

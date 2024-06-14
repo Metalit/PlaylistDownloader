@@ -10,6 +10,7 @@
 #include "UnityEngine/UI/Button.hpp"
 #include "bsml/shared/BSML/Components/CustomListTableData.hpp"
 #include "bsml/shared/BSML/Components/ProgressBar.hpp"
+#include "playlistcore/shared/PlaylistCore.hpp"
 
 DECLARE_CLASS_CODEGEN(PlaylistDownloader, PlaylistDetail, HMUI::ViewController,
 
@@ -33,13 +34,19 @@ DECLARE_CLASS_CODEGEN(PlaylistDownloader, PlaylistDetail, HMUI::ViewController,
     DECLARE_INSTANCE_FIELD(HMUI::TextPageScrollView*, description);
     DECLARE_INSTANCE_FIELD(UnityEngine::UI::Button*, download);
     DECLARE_INSTANCE_FIELD(UnityEngine::UI::Button*, downloadSongs);
+    DECLARE_INSTANCE_FIELD(UnityEngine::UI::Button*, update);
+    DECLARE_INSTANCE_FIELD(UnityEngine::UI::Button*, updateSongs);
     DECLARE_INSTANCE_FIELD(BSML::CustomListTableData*, list);
     DECLARE_INSTANCE_FIELD(ListW<BSML::CustomCellInfo*>, songData);
     DECLARE_INSTANCE_METHOD(void, downloadClicked);
     DECLARE_INSTANCE_METHOD(void, downloadSongsClicked);
+    DECLARE_INSTANCE_METHOD(void, updateClicked);
+    DECLARE_INSTANCE_METHOD(void, updateSongsClicked);
 
     DECLARE_INSTANCE_FIELD(BSML::ProgressBar*, downloadProgress);
 
     private:
     static inline PlaylistDownloader::PlaylistDetail* instance;
+
+    void DownloadMissingSongs(PlaylistCore::Playlist* playlist);
 )

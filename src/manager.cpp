@@ -7,7 +7,6 @@
 #include "customtypes/playlistdetail.hpp"
 #include "customtypes/playlistlist.hpp"
 #include "main.hpp"
-#include "playlistcore/shared/PlaylistCore.hpp"
 #include "playlistcore/shared/Utils.hpp"
 #include "web-utils/shared/WebUtils.hpp"
 
@@ -392,18 +391,18 @@ namespace Manager {
         GetSprite(url, callback);
     }
 
-    bool SelectedPlaylistOwned() {
+    PlaylistCore::Playlist* SelectedPlaylistOwned() {
         auto playlist = GetSelectedPlaylist();
         if (!playlist)
-            return false;
+            return nullptr;
 
         auto allLists = PlaylistCore::GetLoadedPlaylists();
         for (auto& loaded : allLists) {
             auto& cdata = loaded->playlistJSON.CustomData;
             if (cdata.has_value() && cdata->SyncURL == playlist->PlaylistURL())
-                return true;
+                return loaded;
         }
-        return false;
+        return nullptr;
     }
     void GetPlaylistFile(Playlist* playlist, std::function<void(std::optional<PlaylistCore::BPList>)> callback) {
         logger.debug("Getting playlist file {}", playlist->Title());
