@@ -46,12 +46,12 @@ void GetBeatSaverPlaylists(std::function<void(std::vector<std::unique_ptr<Playli
     std::string url = "https://api.beatsaver.com/playlists/search/";
     url += std::to_string(page);
     std::unordered_map<std::string, std::string> queries;
-    queries["curated"] = getConfig().curated.GetValue() ? "true" : "false";
+    if (getConfig().curated.GetValue())
+        queries["curated"] = "true";
     queries["includeEmpty"] = getConfig().includeEmpty.GetValue() ? "true" : "false";
     queries["sortOrder"] = getConfig().sort.GetValue();
     if (!search.empty())
-        queries["search"] = search;
-    logger.debug("will get {}", url);
+        queries["q"] = search;
     GetAsync<BeatSaverResponse>({url, queries}, [callback](auto response) {
         std::vector<std::unique_ptr<Playlist>> ret = {};
         for (auto& playlist : response.Playlists)
