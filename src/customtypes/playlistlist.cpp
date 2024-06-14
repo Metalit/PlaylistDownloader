@@ -83,10 +83,8 @@ void PlaylistList::Refresh(bool full) {
 
     for (int i = currentPos; i < playlists.size(); i++) {
         Manager::GetPlaylistCover(playlists[i], [this, i, state](UnityEngine::Sprite* cover) {
-            if (state != Manager::GetState() || this != PlaylistList::instance)
+            if (state != Manager::GetState() || this != PlaylistList::instance || i >= playlistData->Count)
                 return;
-
-            logger.debug("got playlist cover {}", i);
 
             playlistData[i]->icon = cover;
             list->tableView->RefreshCellsContent();
