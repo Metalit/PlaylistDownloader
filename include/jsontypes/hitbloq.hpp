@@ -27,5 +27,6 @@ inline std::unique_ptr<Playlist> FromHitbloq(HitbloqPlaylist const& playlist) {
         .Description = playlist.description.empty() ? playlist.short_description : playlist.description,
         .PlaylistURL = playlist.download_url,
         .ImageURL = playlist.image,
+        .FallbackImage = &IncludedAssets::Hitbloq_png,
     });
 }

@@ -106,7 +106,7 @@ void PlaylistDetail::Refresh(bool full) {
 
     for (int i = currentPos; i < songs.size(); i++) {
         Manager::GetSongCover(songs[i], [this, i, playlist](UnityEngine::Sprite* cover) {
-            if (playlist != Manager::GetSelectedPlaylist() || this != PlaylistDetail::instance)
+            if (playlist != Manager::GetSelectedPlaylist() || i >= songData.size() || this != PlaylistDetail::instance)
                 return;
 
             logger.debug("got song cover {} {}", songData[i]->text, cover != nullptr);

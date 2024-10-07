@@ -25,5 +25,6 @@ inline std::unique_ptr<Playlist> FromAccSaber(AccSaberPlaylist const& playlist) 
         .Description = playlist.description,
         .PlaylistURL = playlist.downloadLink,
         .ImageURL = playlist.imageUrl,
+        .FallbackImage = &IncludedAssets::AccSaber_png,
     });
 }

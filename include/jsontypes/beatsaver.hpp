@@ -31,5 +31,6 @@ inline std::unique_ptr<Playlist> FromBeatSaver(BeatSaverPlaylist const& playlist
         .Description = playlist.description,
         .PlaylistURL = playlist.downloadURL,
         .ImageURL = playlist.playlistImage,
+        .FallbackImage = &IncludedAssets::BeatSaver_png,
     });
 }

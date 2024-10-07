@@ -25,5 +25,6 @@ inline std::unique_ptr<Playlist> FromBeatLeader(BeatLeaderPlaylist const& playli
         .Description = "",
         .PlaylistURL = "https://api.beatleader.xyz/playlist/" + std::to_string(playlist.playlistId),
         .ImageURL = playlist.image,
+        .FallbackImage = &IncludedAssets::BeatLeader_png,
     });
 }

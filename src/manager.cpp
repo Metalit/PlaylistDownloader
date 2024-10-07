@@ -378,10 +378,10 @@ namespace Manager {
             callback(cachedPlaylistCovers.get(url));
             return;
         }
-        callback = [url, callback = std::move(callback)](UnityEngine::Sprite* sprite) {
+        callback = [url, fallback = playlist->FallbackImage, callback = std::move(callback)](UnityEngine::Sprite* sprite) {
             if (sprite)
                 cachedPlaylistCovers.add(url, sprite);
-            callback(sprite);
+            callback(sprite ? sprite : BSML::Utilities::LoadSpriteRaw(ArrayW<uint8_t>(*fallback)));
         };
         GetSprite(url, callback);
     }
