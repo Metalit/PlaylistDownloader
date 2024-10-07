@@ -5,6 +5,7 @@
 #include "HMUI/NavigationController.hpp"
 
 DECLARE_CLASS_CODEGEN(PlaylistDownloader, MainMenu, HMUI::NavigationController,
+    DECLARE_DEFAULT_CTOR();
 
     DECLARE_OVERRIDE_METHOD_MATCH(void, DidActivate, &HMUI::ViewController::DidActivate, bool firstActivation, bool addedToHierarchy, bool screenSystemEnabling);
     DECLARE_INSTANCE_METHOD(HMUI::NavigationController*, GetSubNavigationController);

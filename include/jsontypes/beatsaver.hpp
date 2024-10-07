@@ -24,23 +24,12 @@ DECLARE_JSON_CLASS(BeatSaverResponse,
 
 #include "apis.hpp"
 
-struct BeatSaverPlaylistWrapper : Playlist {
-    std::string Title() override {
-        return playlist.name;
-    }
-    std::string Author() override {
-        return playlist.owner.name;
-    }
-    std::string Description() override {
-        return playlist.description;
-    }
-    std::string PlaylistURL() override {
-        return playlist.downloadURL;
-    }
-    std::string ImageURL() override {
-        return playlist.playlistImage;
-    }
-    BeatSaverPlaylistWrapper(BeatSaverPlaylist playlist) : playlist(playlist) {}
-    private:
-    BeatSaverPlaylist playlist;
-};
+inline std::unique_ptr<Playlist> FromBeatSaver(BeatSaverPlaylist const& playlist) {
+    return std::make_unique<Playlist>(Playlist{
+        .Title = playlist.name,
+        .Author = playlist.owner.name,
+        .Description = playlist.description,
+        .PlaylistURL = playlist.downloadURL,
+        .ImageURL = playlist.playlistImage,
+    });
+}

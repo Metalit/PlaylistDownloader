@@ -75,7 +75,7 @@ void PlaylistList::Refresh(bool full) {
         return;
 
     for (int i = currentPos; i < playlists.size(); i++)
-        playlistData->Add(BSML::CustomCellInfo::construct(playlists[i]->Title(), playlists[i]->Author()));
+        playlistData->Add(BSML::CustomCellInfo::construct(playlists[i]->Title, playlists[i]->Author));
 
     auto pos = list->tableView->contentTransform->anchoredPosition.y;
     list->tableView->ReloadData();

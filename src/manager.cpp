@@ -253,7 +253,7 @@ namespace Manager {
         auto playlist = GetSelectedPlaylist();
         if (!playlist || songsPage > receivedSongsPages || songsDone)
             return;
-        logger.debug("Getting playlist songs {} page {}", playlist->Title(), songsPage);
+        logger.debug("Getting playlist songs {} page {}", playlist->Title, songsPage);
         auto callback = [currentPage = songsPage, playlist](std::optional<PlaylistCore::BPList> downloaded) {
             if (playlist != GetSelectedPlaylist() || !downloaded)
                 return;
@@ -372,8 +372,8 @@ namespace Manager {
     }
 
     void GetPlaylistCover(Playlist* playlist, std::function<void(UnityEngine::Sprite*)> callback) {
-        logger.debug("Getting playlist cover {}", playlist->Title());
-        auto url = playlist->ImageURL();
+        logger.debug("Getting playlist cover {}", playlist->Title);
+        auto url = playlist->ImageURL;
         if (cachedPlaylistCovers.has(url)) {
             callback(cachedPlaylistCovers.get(url));
             return;
@@ -391,22 +391,24 @@ namespace Manager {
         GetSprite(url, callback);
     }
 
-    PlaylistCore::Playlist* SelectedPlaylistOwned() {
-        auto playlist = GetSelectedPlaylist();
-        if (!playlist)
-            return nullptr;
-
+    PlaylistCore::Playlist* PlaylistOwned(Playlist const* downloaderPlaylist) {
         auto allLists = PlaylistCore::GetLoadedPlaylists();
         for (auto& loaded : allLists) {
             auto& cdata = loaded->playlistJSON.CustomData;
-            if (cdata.has_value() && cdata->SyncURL == playlist->PlaylistURL())
+            if (cdata.has_value() && cdata->SyncURL == downloaderPlaylist->PlaylistURL)
                 return loaded;
         }
         return nullptr;
     }
+    PlaylistCore::Playlist* SelectedPlaylistOwned() {
+        auto playlist = GetSelectedPlaylist();
+        if (!playlist)
+            return nullptr;
+        return PlaylistOwned(playlist);
+    }
     void GetPlaylistFile(Playlist* playlist, std::function<void(std::optional<PlaylistCore::BPList>)> callback) {
-        logger.debug("Getting playlist file {}", playlist->Title());
-        auto url = playlist->PlaylistURL();
+        logger.debug("Getting playlist file {}", playlist->Title);
+        auto url = playlist->PlaylistURL;
         if (cachedPlaylists.has(url)) {
             callback(cachedPlaylists.get(url));
             return;

@@ -9,9 +9,8 @@
 #include "web-utils/shared/WebUtils.hpp"
 
 inline std::string lower(std::string str) {
-    std::string ret = str;
-    std::transform(str.begin(), str.end(), ret.begin(), tolower);
-    return ret;
+    std::transform(str.begin(), str.end(), str.begin(), tolower);
+    return str;
 }
 
 template <class T>
@@ -36,7 +35,7 @@ void GetAccSaberPlaylists(std::function<void(std::vector<std::unique_ptr<Playlis
         std::vector<std::unique_ptr<Playlist>> ret = {};
         for (auto& playlist : response.Playlists) {
             if (search.empty() || lower(playlist.displayName).find(search) != std::string::npos)
-                ret.emplace_back(std::make_unique<AccSaberPlaylistWrapper>(playlist));
+                ret.emplace_back(FromAccSaber(playlist));
         }
         callback(std::move(ret));
     });
@@ -55,7 +54,7 @@ void GetBeatSaverPlaylists(std::function<void(std::vector<std::unique_ptr<Playli
     GetAsync<BeatSaverResponse>({url, queries}, [callback](auto response) {
         std::vector<std::unique_ptr<Playlist>> ret = {};
         for (auto& playlist : response.Playlists)
-            ret.emplace_back(std::make_unique<BeatSaverPlaylistWrapper>(playlist));
+            ret.emplace_back(FromBeatSaver(playlist));
         callback(std::move(ret));
     });
 }
@@ -70,7 +69,7 @@ void GetBeatLeaderPlaylists(std::function<void(std::vector<std::unique_ptr<Playl
         std::vector<std::unique_ptr<Playlist>> ret = {};
         for (auto& playlist : response.Playlists) {
             if (playlist.downloadable)
-                ret.emplace_back(std::make_unique<BeatLeaderPlaylistWrapper>(playlist));
+                ret.emplace_back(FromBeatLeader(playlist));
         }
         callback(std::move(ret));
     });
@@ -86,7 +85,7 @@ void GetHitbloqPlaylists(std::function<void(std::vector<std::unique_ptr<Playlist
     GetAsync<HitbloqResponse>({url, queries}, [callback](auto response) {
         std::vector<std::unique_ptr<Playlist>> ret = {};
         for (auto& playlist : response.Playlists)
-            ret.emplace_back(std::make_unique<HitbloqPlaylistWrapper>(playlist));
+            ret.emplace_back(FromHitbloq(playlist));
         callback(std::move(ret));
     });
 }

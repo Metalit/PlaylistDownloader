@@ -4,12 +4,11 @@
 #include <string>
 
 struct Playlist {
-    virtual std::string Title() = 0;
-    virtual std::string Author() = 0;
-    virtual std::string Description() = 0;
-    virtual std::string PlaylistURL() = 0;
-    virtual std::string ImageURL() = 0;
-    virtual ~Playlist() = default;
+    std::string Title;
+    std::string Author;
+    std::string Description;
+    std::string PlaylistURL;
+    std::string ImageURL;
 };
 
 void GetAccSaberPlaylists(std::function<void(std::vector<std::unique_ptr<Playlist>> playlists)> callback, int page, std::string search);

@@ -18,23 +18,12 @@ DECLARE_JSON_CLASS(BeatLeaderResponse,
 
 #include "apis.hpp"
 
-struct BeatLeaderPlaylistWrapper : Playlist {
-    std::string Title() override {
-        return playlist.name;
-    }
-    std::string Author() override {
-        return "BeatLeader";
-    }
-    std::string Description() override {
-        return "";
-    }
-    std::string PlaylistURL() override {
-        return "https://api.beatleader.xyz/playlist/" + std::to_string(playlist.playlistId);
-    }
-    std::string ImageURL() override {
-        return playlist.image;
-    }
-    BeatLeaderPlaylistWrapper(BeatLeaderPlaylist playlist) : playlist(playlist) {}
-    private:
-    BeatLeaderPlaylist playlist;
-};
+inline std::unique_ptr<Playlist> FromBeatLeader(BeatLeaderPlaylist const& playlist) {
+    return std::make_unique<Playlist>(Playlist{
+        .Title = playlist.name,
+        .Author = "BeatLeader",
+        .Description = "",
+        .PlaylistURL = "https://api.beatleader.xyz/playlist/" + std::to_string(playlist.playlistId),
+        .ImageURL = playlist.image,
+    });
+}

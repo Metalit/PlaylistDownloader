@@ -18,23 +18,12 @@ DECLARE_JSON_CLASS(AccSaberResponse,
 
 #include "apis.hpp"
 
-struct AccSaberPlaylistWrapper : Playlist {
-    std::string Title() override {
-        return playlist.displayName;
-    }
-    std::string Author() override {
-        return "AccSaber";
-    }
-    std::string Description() override {
-        return playlist.description;
-    }
-    std::string PlaylistURL() override {
-        return playlist.downloadLink;
-    }
-    std::string ImageURL() override {
-        return playlist.imageUrl;
-    }
-    AccSaberPlaylistWrapper(AccSaberPlaylist playlist) : playlist(playlist) {}
-    private:
-    AccSaberPlaylist playlist;
-};
+inline std::unique_ptr<Playlist> FromAccSaber(AccSaberPlaylist const& playlist) {
+    return std::make_unique<Playlist>(Playlist{
+        .Title = playlist.displayName,
+        .Author = "AccSaber",
+        .Description = playlist.description,
+        .PlaylistURL = playlist.downloadLink,
+        .ImageURL = playlist.imageUrl,
+    });
+}

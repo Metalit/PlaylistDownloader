@@ -20,25 +20,12 @@ DECLARE_JSON_CLASS(HitbloqResponse,
 
 #include "apis.hpp"
 
-struct HitbloqPlaylistWrapper : Playlist {
-    std::string Title() override {
-        return playlist.title;
-    }
-    std::string Author() override {
-        return playlist.author;
-    }
-    std::string Description() override {
-        if (playlist.description.size() > 0)
-            return playlist.description;
-        return playlist.short_description;
-    }
-    std::string PlaylistURL() override {
-        return playlist.download_url;
-    }
-    std::string ImageURL() override {
-        return playlist.image;
-    }
-    HitbloqPlaylistWrapper(HitbloqPlaylist playlist) : playlist(playlist) {}
-    private:
-    HitbloqPlaylist playlist;
-};
+inline std::unique_ptr<Playlist> FromHitbloq(HitbloqPlaylist const& playlist) {
+    return std::make_unique<Playlist>(Playlist{
+        .Title = playlist.title,
+        .Author = playlist.author,
+        .Description = playlist.description.empty() ? playlist.short_description : playlist.description,
+        .PlaylistURL = playlist.download_url,
+        .ImageURL = playlist.image,
+    });
+}

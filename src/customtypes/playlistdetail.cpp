@@ -1,11 +1,13 @@
 #include "customtypes/playlistdetail.hpp"
 
 #include "assets.hpp"
+#include "bsml/shared/BSML-Lite/Creation/Buttons.hpp"
 #include "bsml/shared/BSML.hpp"
 #include "bsml/shared/BSML/MainThreadScheduler.hpp"
 #include "bsml/shared/Helpers/creation.hpp"
 #include "main.hpp"
 #include "manager.hpp"
+#include "playlistcore/shared/PlaylistCore.hpp"
 #include "songcore/shared/SongCore.hpp"
 
 DEFINE_TYPE(PlaylistDownloader, PlaylistDetail);
@@ -35,7 +37,7 @@ void PlaylistDetail::SetupBSMLFields() {
 
 void PlaylistDetail::PostParse() {
     list->tableView->selectionType = HMUI::TableViewSelectionType::None;
-    downloadProgress = BSML::Lite::CreateProgressBar({-1.4, 3.1, 4}, "Downloading Songs...", "", "PlaylistDownloader");
+    downloadProgress = BSML::Lite::CreateProgressBar({-1.4, 3.1, 4}, "Downloading Playlist...", "", "");
     downloadProgress->gameObject->active = false;
 
     auto delegate = custom_types::MakeDelegate<System::Action_1<float>*>((std::function<void(float)>) [this](float position) {
@@ -74,9 +76,9 @@ void PlaylistDetail::Refresh(bool full) {
             cover->sprite = sprite;
         });
 
-        name->text = playlist->Title();
-        author->text = std::string("<line-height=75%>") + playlist->Author();
-        description->SetText(playlist->Description());
+        name->text = playlist->Title;
+        author->text = std::string("<line-height=75%>") + playlist->Author;
+        description->SetText(playlist->Description);
         description->ScrollTo(0, false);
 
         UpdateDownloadButtons();
@@ -130,19 +132,29 @@ void PlaylistDetail::UpdateDownloadButtons() {
     if (!download || !downloadSongs || !update || !updateSongs)
         return;
 
+    std::string_view selectedUrl = Manager::GetSelectedPlaylist()->PlaylistURL;
+    bool currentDownload = currentDownloadUrl == selectedUrl;
+    if (!currentDownload) {
+        for (auto& download : queue) {
+            if (download.playlist.PlaylistURL == selectedUrl) {
+                currentDownload = true;
+                break;
+            }
+        }
+    }
+
     bool owned = Manager::SelectedPlaylistOwned();
     download->gameObject->active = !owned;
     downloadSongs->gameObject->active = !owned;
     update->gameObject->active = owned;
     updateSongs->gameObject->active = owned;
     // set uninteractable during download
-    bool downloading = downloadProgress->gameObject->active;
-    download->interactable = !downloading;
-    downloadSongs->interactable = !downloading;
-    update->interactable = !downloading;
-    updateSongs->interactable = !downloading;
+    download->interactable = !currentDownload;
+    downloadSongs->interactable = !currentDownload;
+    update->interactable = !currentDownload;
+    updateSongs->interactable = !currentDownload;
     // explain why uninteractable
-    auto hover = downloading ? "Waiting for download..." : "";
+    auto hover = currentDownload ? "Waiting for download..." : "";
     download->GetComponent<HMUI::HoverHint*>()->text = hover;
     downloadSongs->GetComponent<HMUI::HoverHint*>()->text = hover;
     update->GetComponent<HMUI::HoverHint*>()->text = hover;
@@ -159,99 +171,88 @@ void PlaylistDetail::SetLoading(bool value) {
 }
 
 void PlaylistDetail::SetDownloading(bool value) {
-    if (!download || !downloadSongs || !downloadProgress)
+    if (!downloadProgress)
         return;
     downloadProgress->gameObject->active = value;
-    if (value) {
-        downloadProgress->subText1->text = "Waiting for file...";
-        downloadProgress->SetProgress(0);
-    }
+    if (value)
+        downloadProgress->subText2->text = queue.empty() ? "" : fmt::format("{} in Queue", queue.size());
     UpdateDownloadButtons();
 }
 
 void PlaylistDetail::downloadClicked() {
-    auto playlist = Manager::GetSelectedPlaylist();
-    if (!playlist)
-        return;
-
-    SetDownloading(true);
-
-    Manager::GetPlaylistFile(playlist, [this](std::optional<PlaylistCore::BPList> file) {
-        if (file)
-            PlaylistCore::AddPlaylist(*file);
-        SetDownloading(false);
-    });
+    AddDownload(false, false);
 }
 
 void PlaylistDetail::downloadSongsClicked() {
+    AddDownload(false, true);
+}
+
+void PlaylistDetail::updateClicked() {
+    AddDownload(true, false);
+}
+
+void PlaylistDetail::updateSongsClicked() {
+    AddDownload(true, true);
+}
+
+void PlaylistDetail::AddDownload(bool update, bool songs) {
+    if (update && !Manager::SelectedPlaylistOwned())
+        return;
     auto playlist = Manager::GetSelectedPlaylist();
     if (!playlist)
         return;
 
-    SetDownloading(true);
+    queue.emplace_back(DownloadInfo{.playlist = *playlist, .update = update, .songs = songs});
+    if (!downloadProgress || !downloadProgress->gameObject->active)
+        PopDownload();
 
-    Manager::GetPlaylistFile(playlist, [this](std::optional<PlaylistCore::BPList> file) {
+    SetDownloading(true);
+}
+
+void PlaylistDetail::PopDownload() {
+    auto download = queue[0];
+    queue.erase(queue.begin());
+
+    if (downloadProgress) {
+        downloadProgress->subText1->text = "Waiting for file...";
+        downloadProgress->subText2->text = queue.empty() ? "" : fmt::format("{} in queue", queue.size());
+        downloadProgress->SetProgress(0);
+    }
+
+    Manager::GetPlaylistFile(&download.playlist, [this, download](std::optional<PlaylistCore::BPList> file) {
         if (this != PlaylistDetail::instance)
             return;
         if (!file) {
-            SetDownloading(false);
+            if (!queue.empty())
+                PopDownload();
+            else
+                SetDownloading(false);
             return;
         }
-        auto [_, playlist] = PlaylistCore::AddPlaylist(*file);
-
-        DownloadMissingSongs(playlist);
-    });
-}
-
-void PlaylistDetail::updateClicked() {
-    auto playlist = Manager::GetSelectedPlaylist();
-    auto target = Manager::SelectedPlaylistOwned();
-    if (!playlist || !target)
-        return;
-
-    SetDownloading(true);
-
-    Manager::GetPlaylistFile(playlist, [this, target](std::optional<PlaylistCore::BPList> file) {
-        if (file) {
+        PlaylistCore::Playlist* target;
+        if (!download.update) {
+            auto pair = PlaylistCore::AddPlaylist(*file);
+            target = pair.second;
+        } else {
+            target = Manager::PlaylistOwned(&download.playlist);
+            // should be owned since we checked before starting, but maybe they deleted it with pm
+            if (!target)
+                return;
             target->playlistJSON = *file;
             target->Save();
             PlaylistCore::MarkPlaylistForReload(target);
             PlaylistCore::ReloadPlaylists();
         }
-        SetDownloading(false);
-    });
-}
-
-void PlaylistDetail::updateSongsClicked() {
-    auto playlist = Manager::GetSelectedPlaylist();
-    auto target = Manager::SelectedPlaylistOwned();
-    if (!playlist || !target)
-        return;
-
-    SetDownloading(true);
-
-    Manager::GetPlaylistFile(playlist, [this, target](std::optional<PlaylistCore::BPList> file) {
-        if (this != PlaylistDetail::instance)
-            return;
-        if (!file) {
+        if (download.songs)
+            DownloadMissingSongs(target);
+        else if (!queue.empty())
+            PopDownload();
+        else
             SetDownloading(false);
-            return;
-        }
-        target->playlistJSON = *file;
-        target->Save();
-        PlaylistCore::MarkPlaylistForReload(target);
-        PlaylistCore::ReloadPlaylists();
-
-        DownloadMissingSongs(target);
     });
 }
 
 void PlaylistDetail::DownloadMissingSongs(PlaylistCore::Playlist* playlist) {
-    if (downloadProgress) {
-        downloadProgress->subText1->text = "0 / 0";
-        downloadProgress->SetProgress(0);
-    }
-
     PlaylistCore::DownloadMissingSongsFromPlaylist(
         playlist,
         [this]() {
@@ -259,14 +260,17 @@ void PlaylistDetail::DownloadMissingSongs(PlaylistCore::Playlist* playlist) {
                 if (this != PlaylistDetail::instance)
                     return;
                 SongCore::API::Loading::RefreshSongs(false);
-                SetDownloading(false);
+                if (!queue.empty())
+                    PopDownload();
+                else
+                    SetDownloading(false);
             });
         },
         [this](int total, int progress) {
             BSML::MainThreadScheduler::Schedule([this, progress, total]() {
-                if (this != PlaylistDetail::instance)
+                if (this != PlaylistDetail::instance || !downloadProgress)
                     return;
-                downloadProgress->subText1->text = fmt::format("{} / {}", progress, total);
+                downloadProgress->subText1->text = fmt::format("{} / {} songs", progress, total);
                 downloadProgress->SetProgress(progress / (float) total);
             });
         });
