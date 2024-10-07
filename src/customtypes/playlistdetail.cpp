@@ -24,8 +24,7 @@ void PlaylistDetail::OnEnable() {
 void PlaylistDetail::DidActivate(bool firstActivation, bool addedToHierarchy, bool screenSystemEnabling) {
     if (firstActivation) {
         SetupBSMLFields();
-        // AddHotReload(this, "playlistdetail");
-        BSML::parse_and_construct(IncludedAssets::playlistdetail_bsml, transform, this);
+        BSML_FILE(playlistdetail);
     }
     UpdateScrollView();
     UpdateDownloadButtons();
@@ -273,5 +272,6 @@ void PlaylistDetail::DownloadMissingSongs(PlaylistCore::Playlist* playlist) {
                 downloadProgress->subText1->text = fmt::format("{} / {} songs", progress, total);
                 downloadProgress->SetProgress(progress / (float) total);
             });
-        });
+        }
+    );
 }

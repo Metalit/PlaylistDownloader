@@ -22,7 +22,8 @@ void MainMenu::DidActivate(bool firstActivation, bool addedToHierarchy, bool scr
     GetSubNavigationController()->transform->SetAsFirstSibling();
     if (detailShown)
         GetSubNavigationController()->SetChildViewControllers(
-            {(HMUI::ViewController*) PlaylistList::GetInstance(), (HMUI::ViewController*) PlaylistDetail::GetInstance()});
+            {(HMUI::ViewController*) PlaylistList::GetInstance(), (HMUI::ViewController*) PlaylistDetail::GetInstance()}
+        );
     else
         GetSubNavigationController()->SetChildViewController((HMUI::ViewController*) PlaylistList::GetInstance());
 }

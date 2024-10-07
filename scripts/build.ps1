@@ -3,6 +3,9 @@ Param(
     [Switch] $clean,
 
     [Parameter(Mandatory=$false)]
+    [Switch] $hotReload,
+
+    [Parameter(Mandatory=$false)]
     [Switch] $help
 )
 
@@ -11,6 +14,7 @@ if ($help -eq $true) {
     Write-Output "`n-- Arguments --`n"
 
     Write-Output "-Clean `t`t Deletes the `"build`" folder, so that the entire library is rebuilt"
+    Write-Output "-HotReload `t`t Builds the mod to watch and hot reload from BSML files in /sdcard"
 
     exit
 }
@@ -27,5 +31,10 @@ if (($clean.IsPresent) -or (-not (Test-Path -Path "build"))) {
     new-item -Path build -ItemType Directory
 }
 
-& cmake -G "Ninja" -DCMAKE_BUILD_TYPE="RelWithDebInfo" -B build
+$def = "OFF"
+if ($hotReload.IsPresent) {
+    $def = "ON"
+}
+
+& cmake -G "Ninja" -DCMAKE_BUILD_TYPE="RelWithDebInfo" -DHOT_RELOAD="$def" -B build
 & cmake --build ./build

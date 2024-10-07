@@ -60,14 +60,14 @@ jobs:
           echo NAME="${files[0]}" >> $GITHUB_OUTPUT
 
       - name: Upload non-debug artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.libname.outputs.NAME }}
           path: ./build/${{ steps.libname.outputs.NAME }}
           if-no-files-found: error
 
       - name: Upload qmod artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.qmodName }}.qmod
           path: ./${{ env.qmodName }}.qmod

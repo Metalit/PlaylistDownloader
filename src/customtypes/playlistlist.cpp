@@ -24,8 +24,7 @@ void PlaylistList::OnEnable() {
 void PlaylistList::DidActivate(bool firstActivation, bool addedToHierarchy, bool screenSystemEnabling) {
     if (firstActivation) {
         SetupBSMLFields();
-        // AddHotReload(this, "playlistlist");
-        BSML::parse_and_construct(IncludedAssets::playlistlist_bsml, transform, this);
+        BSML_FILE(playlistlist);
     }
     UpdateScrollView();
 }

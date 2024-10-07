@@ -35,8 +35,7 @@ void FilterMenu::OnEnable() {
 void FilterMenu::DidActivate(bool firstActivation, bool addedToHierarchy, bool screenSystemEnabling) {
     if (firstActivation) {
         SetupBSMLFields();
-        // AddHotReload(this, "filtermenu");
-        BSML::parse_and_construct(IncludedAssets::filtermenu_bsml, transform, this);
+        BSML_FILE(filtermenu);
     }
 }
 
