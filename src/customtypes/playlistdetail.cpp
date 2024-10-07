@@ -174,7 +174,9 @@ void PlaylistDetail::SetDownloading(bool value) {
         return;
     downloadProgress->gameObject->active = value;
     if (value)
-        downloadProgress->subText2->text = queue.empty() ? "" : fmt::format("{} in Queue", queue.size());
+        downloadProgress->subText2->text = queue.empty() ? "" : fmt::format("{} in queue", queue.size());
+    else
+        currentDownloadUrl = "";
     UpdateDownloadButtons();
 }
 
@@ -200,17 +202,22 @@ void PlaylistDetail::AddDownload(bool update, bool songs) {
     auto playlist = Manager::GetSelectedPlaylist();
     if (!playlist)
         return;
+    bool wasDownloading = downloadProgress && downloadProgress->gameObject->active;
 
     queue.emplace_back(DownloadInfo{.playlist = *playlist, .update = update, .songs = songs});
-    if (!downloadProgress || !downloadProgress->gameObject->active)
-        PopDownload();
-
     SetDownloading(true);
+    if (!wasDownloading)
+        PopDownload();
 }
 
 void PlaylistDetail::PopDownload() {
     auto download = queue[0];
     queue.erase(queue.begin());
+
+    currentDownloadUrl = download.playlist.PlaylistURL;
+    UpdateDownloadButtons();
+
+    logger.info("running download {}: {} {}", currentDownloadUrl, download.update, download.songs);
 
     if (downloadProgress) {
         downloadProgress->subText1->text = "Waiting for file...";
@@ -219,35 +226,37 @@ void PlaylistDetail::PopDownload() {
     }
 
     Manager::GetPlaylistFile(&download.playlist, [this, download](std::optional<PlaylistCore::BPList> file) {
+        logger.info("downloaded file {}: {} {}", currentDownloadUrl, file.has_value(), this == PlaylistDetail::instance);
         if (this != PlaylistDetail::instance)
             return;
-        if (!file) {
+        auto popNext = [this]() {
             if (!queue.empty())
                 PopDownload();
             else
                 SetDownloading(false);
+        };
+        if (!file) {
+            popNext();
             return;
         }
         PlaylistCore::Playlist* target;
-        if (!download.update) {
-            auto pair = PlaylistCore::AddPlaylist(*file);
-            target = pair.second;
-        } else {
+        if (download.update) {
             target = Manager::PlaylistOwned(&download.playlist);
             // should be owned since we checked before starting, but maybe they deleted it with pm
-            if (!target)
+            if (!target) {
+                popNext();
                 return;
+            }
             target->playlistJSON = *file;
             target->Save();
             PlaylistCore::MarkPlaylistForReload(target);
             PlaylistCore::ReloadPlaylists();
-        }
+        } else
+            target = PlaylistCore::AddPlaylist(*file).second;
         if (download.songs)
             DownloadMissingSongs(target);
-        else if (!queue.empty())
-            PopDownload();
         else
-            SetDownloading(false);
+            popNext();
     });
 }
 

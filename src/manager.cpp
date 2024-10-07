@@ -425,9 +425,9 @@ namespace Manager {
                     ReadFromString(*response.responseData, list);
                     if (!list.CustomData.has_value())
                         list.CustomData.emplace();
-                    auto& syncUrl = list.CustomData->SyncURL;
-                    if (!syncUrl.has_value() || syncUrl->empty())
-                        syncUrl = url;
+                    // override because it's used to check for ownership
+                    // should probably put something else in custom data instead once I update rjm
+                    list.CustomData->SyncURL = url;
                 } catch (JSONException const& exc) {
                     logger.error("Failed to deserialize playlist {}: {}", *response.responseData, exc.what());
                     callback(std::nullopt);
