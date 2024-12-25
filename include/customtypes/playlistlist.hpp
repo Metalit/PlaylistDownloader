@@ -1,10 +1,9 @@
 #pragma once
 
-#include "custom-types/shared/macros.hpp"
-
 #include "HMUI/ViewController.hpp"
 #include "UnityEngine/GameObject.hpp"
 #include "bsml/shared/BSML/Components/CustomListTableData.hpp"
+#include "custom-types/shared/macros.hpp"
 
 DECLARE_CLASS_CODEGEN(PlaylistDownloader, PlaylistList, HMUI::ViewController,
     DECLARE_DEFAULT_CTOR();

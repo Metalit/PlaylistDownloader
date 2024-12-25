@@ -1,8 +1,7 @@
 #pragma once
 
-#include "custom-types/shared/macros.hpp"
-
 #include "HMUI/NavigationController.hpp"
+#include "custom-types/shared/macros.hpp"
 
 DECLARE_CLASS_CODEGEN(PlaylistDownloader, MainMenu, HMUI::NavigationController,
     DECLARE_DEFAULT_CTOR();

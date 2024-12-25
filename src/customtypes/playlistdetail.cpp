@@ -1,5 +1,10 @@
 #include "customtypes/playlistdetail.hpp"
 
+#include "UnityEngine/AudioType.hpp"
+#include "UnityEngine/Networking/DownloadHandlerAudioClip.hpp"
+#include "UnityEngine/Networking/UnityWebRequest.hpp"
+#include "UnityEngine/Networking/UnityWebRequestMultimedia.hpp"
+#include "UnityEngine/Resources.hpp"
 #include "assets.hpp"
 #include "bsml/shared/BSML-Lite/Creation/Buttons.hpp"
 #include "bsml/shared/BSML.hpp"
@@ -21,9 +26,15 @@ void PlaylistDetail::OnEnable() {
     rectTransform->sizeDelta = {140, 65};
 }
 
+void PlaylistDetail::OnDisable() {
+    if (previewer)
+        previewer->CrossfadeToDefault();
+}
+
 void PlaylistDetail::DidActivate(bool firstActivation, bool addedToHierarchy, bool screenSystemEnabling) {
     if (firstActivation) {
         SetupBSMLFields();
+        previewer = UnityEngine::Resources::FindObjectsOfTypeAll<GlobalNamespace::SongPreviewPlayer*>()->First();
         BSML_FILE(playlistdetail);
     }
     UpdateScrollView();
@@ -35,7 +46,6 @@ void PlaylistDetail::SetupBSMLFields() {
 }
 
 void PlaylistDetail::PostParse() {
-    list->tableView->selectionType = HMUI::TableViewSelectionType::None;
     downloadProgress = BSML::Lite::CreateProgressBar({-1.4, 3.1, 4}, "Downloading Playlist...", "", "");
     downloadProgress->gameObject->active = false;
 
@@ -62,7 +72,7 @@ PlaylistDetail* PlaylistDetail::GetInstance() {
 
 void PlaylistDetail::Refresh(bool full) {
     auto playlist = Manager::GetSelectedPlaylist();
-    if (!playlist || !list || !noResultsText)
+    if (!playlist || !list || !noResultsText || !previewer)
         return;
 
     logger.debug("Refreshing playlist detail");
@@ -83,6 +93,8 @@ void PlaylistDetail::Refresh(bool full) {
         UpdateDownloadButtons();
 
         songData->Clear();
+        list->tableView->ClearSelection();
+        previewer->CrossfadeToDefault();
     }
 
     int currentPos = songData->Count;
@@ -196,6 +208,11 @@ void PlaylistDetail::updateSongsClicked() {
     AddDownload(true, true);
 }
 
+void PlaylistDetail::songClicked(UnityW<HMUI::TableView>, int index) {
+    StopAllCoroutines();
+    StartCoroutine(custom_types::Helpers::CoroutineHelper::New(PlayPreview(index)));
+}
+
 void PlaylistDetail::AddDownload(bool update, bool songs) {
     if (update && !Manager::SelectedPlaylistOwned())
         return;
@@ -283,4 +300,23 @@ void PlaylistDetail::DownloadMissingSongs(PlaylistCore::Playlist* playlist) {
             });
         }
     );
+}
+
+custom_types::Helpers::Coroutine PlaylistDetail::PlayPreview(int index) {
+    auto playlist = Manager::GetSelectedPlaylist();
+    auto songs = Manager::GetSongs();
+    if (!playlist || index >= songs.size() || !previewer)
+        co_return;
+
+    auto url = songs[index]->Versions.front().PreviewURL;
+    auto webRequest = UnityEngine::Networking::UnityWebRequestMultimedia::GetAudioClip(url, UnityEngine::AudioType::MPEG);
+    co_yield (System::Collections::IEnumerator*) webRequest->SendWebRequest();
+
+    auto err = webRequest->GetError();
+    if (err == UnityEngine::Networking::UnityWebRequest::UnityWebRequestError::OK) {
+        UnityEngine::AudioClip* clip = UnityEngine::Networking::DownloadHandlerAudioClip::GetContent(webRequest);
+        if (clip)
+            previewer->CrossfadeTo(clip, -5, 0, clip->length, nullptr);
+    } else
+        logger.error("web request error {}", (int) err);
 }

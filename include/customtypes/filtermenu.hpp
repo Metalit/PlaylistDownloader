@@ -1,14 +1,13 @@
 #pragma once
 
-#include "custom-types/shared/macros.hpp"
-
-#include "HMUI/ViewController.hpp"
 #include "HMUI/IconSegmentedControl.hpp"
+#include "HMUI/ModalView.hpp"
+#include "HMUI/ViewController.hpp"
 #include "UnityEngine/Transform.hpp"
 #include "UnityEngine/UI/Button.hpp"
-#include "HMUI/ModalView.hpp"
-#include "bsml/shared/BSML/Components/Settings/ToggleSetting.hpp"
 #include "bsml/shared/BSML/Components/Settings/ListSetting.hpp"
+#include "bsml/shared/BSML/Components/Settings/ToggleSetting.hpp"
+#include "custom-types/shared/macros.hpp"
 
 DECLARE_CLASS_CODEGEN(PlaylistDownloader, FilterMenu, HMUI::ViewController,
     DECLARE_DEFAULT_CTOR();
