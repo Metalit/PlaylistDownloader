@@ -14,12 +14,14 @@
 #include "custom-types/shared/macros.hpp"
 #include "playlistcore/shared/PlaylistCore.hpp"
 
-DECLARE_CLASS_CODEGEN(PlaylistDownloader, PlaylistDetail, HMUI::ViewController,
+DECLARE_CLASS_CODEGEN(PlaylistDownloader, PlaylistDetail, HMUI::ViewController) {
     DECLARE_DEFAULT_CTOR();
 
     DECLARE_INSTANCE_METHOD(void, OnEnable);
     DECLARE_INSTANCE_METHOD(void, OnDisable);
-    DECLARE_OVERRIDE_METHOD_MATCH(void, DidActivate, &HMUI::ViewController::DidActivate, bool firstActivation, bool addedToHierarchy, bool screenSystemEnabling);
+    DECLARE_OVERRIDE_METHOD_MATCH(
+        void, DidActivate, &HMUI::ViewController::DidActivate, bool firstActivation, bool addedToHierarchy, bool screenSystemEnabling
+    );
     DECLARE_INSTANCE_METHOD(void, SetupBSMLFields);
     DECLARE_INSTANCE_METHOD(void, PostParse);
     DECLARE_INSTANCE_METHOD(void, OnDestroy);
@@ -55,7 +57,7 @@ DECLARE_CLASS_CODEGEN(PlaylistDownloader, PlaylistDetail, HMUI::ViewController,
     DECLARE_INSTANCE_FIELD(GlobalNamespace::SongPreviewPlayer*, previewer);
     DECLARE_INSTANCE_FIELD(UnityEngine::AudioClip*, audio);
 
-    private:
+   private:
     static inline PlaylistDownloader::PlaylistDetail* instance;
 
     struct DownloadInfo {
@@ -66,6 +68,6 @@ DECLARE_CLASS_CODEGEN(PlaylistDownloader, PlaylistDetail, HMUI::ViewController,
     std::vector<DownloadInfo> queue = {};
     std::string currentDownloadUrl = "";
 
-    void DownloadMissingSongs(PlaylistCore::Playlist* playlist);
+    void DownloadMissingSongs(PlaylistCore::Playlist * playlist);
     custom_types::Helpers::Coroutine PlayPreview(int index);
-)
+};

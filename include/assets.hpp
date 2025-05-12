@@ -1,51 +1,46 @@
 #pragma once
 
-#include <string_view>
+#include "metacore/shared/assets.hpp"
 
-#include "beatsaber-hook/shared/utils/typedefs.h"
+#define DECLARE_ASSET(name, binary)       \
+    const IncludedAsset name {            \
+        Externs::_binary_##binary##_start, \
+        Externs::_binary_##binary##_end    \
+    };
 
-struct IncludedAsset {
-
-    IncludedAsset(uint8_t* start, uint8_t* end) : array(reinterpret_cast<Array<uint8_t>*>(start)) {
-        array->klass = nullptr;
-        array->monitor = nullptr;
-        array->bounds = nullptr;
-        array->max_length = end - start - 32;
-        *(end - 1) = '\0';
-    }
-
-    operator ArrayW<uint8_t>() const {
-        init();
-        return array;
-    }
-
-    operator std::string_view() const { return {reinterpret_cast<char*>(array->_values), array->get_Length()}; }
-
-    operator std::span<uint8_t>() const { return {array->_values, array->get_Length()}; }
-
-    void init() const {
-        if (!array->klass)
-            array->klass = classof(Array<uint8_t>*);
-    }
-
-   private:
-    Array<uint8_t>* array;
-};
-
-#define DECLARE_FILE(name)                       \
-    extern "C" uint8_t _binary_##name##_start[]; \
-    extern "C" uint8_t _binary_##name##_end[];   \
-    const IncludedAsset name {_binary_##name##_start, _binary_##name##_end};
-
-#define PNG_SPRITE(name) \
-    BSML::Utilities::LoadSpriteRaw(static_cast<ArrayW<uint8_t>>(IncludedAssets::name##_png))
+#define DECLARE_ASSET_NS(namespaze, name, binary) \
+    namespace namespaze { DECLARE_ASSET(name, binary) }
 
 namespace IncludedAssets {
-    DECLARE_FILE(AccSaber_png)
-    DECLARE_FILE(BeatLeader_png)
-    DECLARE_FILE(BeatSaver_png)
-    DECLARE_FILE(Hitbloq_png)
-    DECLARE_FILE(filtermenu_bsml)
-    DECLARE_FILE(playlistdetail_bsml)
-    DECLARE_FILE(playlistlist_bsml)
+    namespace Externs {
+        extern "C" uint8_t _binary_AccSaber_png_start[];
+        extern "C" uint8_t _binary_AccSaber_png_end[];
+        extern "C" uint8_t _binary_BeatLeader_png_start[];
+        extern "C" uint8_t _binary_BeatLeader_png_end[];
+        extern "C" uint8_t _binary_BeatSaver_png_start[];
+        extern "C" uint8_t _binary_BeatSaver_png_end[];
+        extern "C" uint8_t _binary_Hitbloq_png_start[];
+        extern "C" uint8_t _binary_Hitbloq_png_end[];
+        extern "C" uint8_t _binary_filtermenu_bsml_start[];
+        extern "C" uint8_t _binary_filtermenu_bsml_end[];
+        extern "C" uint8_t _binary_playlistdetail_bsml_start[];
+        extern "C" uint8_t _binary_playlistdetail_bsml_end[];
+        extern "C" uint8_t _binary_playlistlist_bsml_start[];
+        extern "C" uint8_t _binary_playlistlist_bsml_end[];
+    }
+
+    // AccSaber.png
+    DECLARE_ASSET(AccSaber_png, AccSaber_png);
+    // BeatLeader.png
+    DECLARE_ASSET(BeatLeader_png, BeatLeader_png);
+    // BeatSaver.png
+    DECLARE_ASSET(BeatSaver_png, BeatSaver_png);
+    // Hitbloq.png
+    DECLARE_ASSET(Hitbloq_png, Hitbloq_png);
+    // filtermenu.bsml
+    DECLARE_ASSET(filtermenu_bsml, filtermenu_bsml);
+    // playlistdetail.bsml
+    DECLARE_ASSET(playlistdetail_bsml, playlistdetail_bsml);
+    // playlistlist.bsml
+    DECLARE_ASSET(playlistlist_bsml, playlistlist_bsml);
 }

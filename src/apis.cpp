@@ -6,12 +6,8 @@
 #include "jsontypes/beatsaver.hpp"
 #include "jsontypes/hitbloq.hpp"
 #include "main.hpp"
+#include "metacore/shared/strings.hpp"
 #include "web-utils/shared/WebUtils.hpp"
-
-inline std::string lower(std::string str) {
-    std::transform(str.begin(), str.end(), str.begin(), tolower);
-    return str;
-}
 
 template <class T>
 void GetAsync(WebUtils::URLOptions url, std::function<void(T)> onResponse) {
@@ -31,10 +27,10 @@ void GetAsync(WebUtils::URLOptions url, std::function<void(T)> onResponse) {
 void GetAccSaberPlaylists(std::function<void(std::vector<std::unique_ptr<Playlist>> playlists)> callback, int page, std::string search) {
     if (page > 0)
         return;
-    GetAsync<AccSaberResponse>({"https://api.accsaber.com/playlists"}, [search = lower(search), callback](auto response) {
+    GetAsync<AccSaberResponse>({"https://api.accsaber.com/playlists"}, [search = MetaCore::Strings::Lower(search), callback](auto response) {
         std::vector<std::unique_ptr<Playlist>> ret = {};
         for (auto& playlist : response.Playlists) {
-            if (search.empty() || lower(playlist.displayName).find(search) != std::string::npos)
+            if (search.empty() || MetaCore::Strings::Lower(playlist.displayName).find(search) != std::string::npos)
                 ret.emplace_back(FromAccSaber(playlist));
         }
         callback(std::move(ret));

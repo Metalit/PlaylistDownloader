@@ -2,25 +2,22 @@
 
 #include "rapidjson-macros/shared/macros.hpp"
 
-DECLARE_JSON_CLASS(BeatSaverUser,
+DECLARE_JSON_STRUCT(BeatSaverUser) {
     VALUE(std::string, name);
-    DISCARD_EXTRA_FIELDS
-)
+};
 
-DECLARE_JSON_CLASS(BeatSaverPlaylist,
+DECLARE_JSON_STRUCT(BeatSaverPlaylist) {
     VALUE(std::string, name);
     VALUE(BeatSaverUser, owner);
     VALUE(std::string, description);
 
     VALUE(std::string, downloadURL);
     VALUE(std::string, playlistImage);
-    DISCARD_EXTRA_FIELDS
-)
+};
 
-DECLARE_JSON_CLASS(BeatSaverResponse,
+DECLARE_JSON_STRUCT(BeatSaverResponse) {
     NAMED_VECTOR(BeatSaverPlaylist, Playlists, "docs");
-    DISCARD_EXTRA_FIELDS
-)
+};
 
 #include "apis.hpp"
 

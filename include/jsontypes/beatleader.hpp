@@ -2,19 +2,17 @@
 
 #include "rapidjson-macros/shared/macros.hpp"
 
-DECLARE_JSON_CLASS(BeatLeaderPlaylist,
+DECLARE_JSON_STRUCT(BeatLeaderPlaylist) {
     VALUE(std::string, name);
 
     VALUE(int, playlistId);
     VALUE(std::string, image);
     VALUE(bool, downloadable);
-    DISCARD_EXTRA_FIELDS
-)
+};
 
-DECLARE_JSON_CLASS(BeatLeaderResponse,
+DECLARE_JSON_STRUCT(BeatLeaderResponse) {
     NAMED_VECTOR(BeatLeaderPlaylist, Playlists, "data");
-    DISCARD_EXTRA_FIELDS
-)
+};
 
 #include "apis.hpp"
 

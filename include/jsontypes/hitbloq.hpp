@@ -2,7 +2,7 @@
 
 #include "rapidjson-macros/shared/macros.hpp"
 
-DECLARE_JSON_CLASS(HitbloqPlaylist,
+DECLARE_JSON_STRUCT(HitbloqPlaylist) {
     VALUE(std::string, title);
     VALUE(std::string, author);
     VALUE(std::string, description);
@@ -10,13 +10,11 @@ DECLARE_JSON_CLASS(HitbloqPlaylist,
 
     VALUE(std::string, download_url);
     VALUE(std::string, image);
-    DISCARD_EXTRA_FIELDS
-)
+};
 
-DECLARE_JSON_CLASS(HitbloqResponse,
-    NAMED_VECTOR(HitbloqPlaylist, Playlists, rapidjson_macros_types::SelfValueType());
-    DISCARD_EXTRA_FIELDS
-)
+DECLARE_JSON_STRUCT(HitbloqResponse) {
+    NAMED_VECTOR(HitbloqPlaylist, Playlists, SELF_OBJECT_NAME);
+};
 
 #include "apis.hpp"
 

@@ -5,7 +5,7 @@
   "info": {
     "name": "PlaylistDownloader",
     "id": "playlistdownloader",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "url": null,
     "additionalData": {
       "overrideSoName": "libplaylistdownloader.so"
@@ -47,63 +47,64 @@
   "dependencies": [
     {
       "id": "beatsaber-hook",
-      "versionRange": "^5.1.9",
-      "additionalData": {
-        "extraFiles": [
-          "src/inline-hook"
-        ]
-      }
-    },
-    {
-      "id": "paper",
-      "versionRange": "^3.6.1",
+      "versionRange": "^6.4.1",
       "additionalData": {}
     },
     {
       "id": "scotland2",
-      "versionRange": "*",
+      "versionRange": "^0.1.6",
       "additionalData": {
         "includeQmod": false
       }
     },
     {
       "id": "custom-types",
-      "versionRange": "^0.17.2",
+      "versionRange": "^0.18.2",
       "additionalData": {}
     },
     {
       "id": "bs-cordl",
-      "versionRange": "^3700.0.0",
+      "versionRange": "^4004.0.0",
       "additionalData": {}
     },
     {
       "id": "bsml",
-      "versionRange": "^0.4.20",
+      "versionRange": "^0.4.51",
       "additionalData": {}
     },
     {
       "id": "config-utils",
-      "versionRange": "^1.4.2",
+      "versionRange": "^2.0.3",
       "additionalData": {}
     },
     {
       "id": "playlistcore",
-      "versionRange": "^1.4.0",
+      "versionRange": "^1.5.0",
       "additionalData": {}
     },
     {
       "id": "songcore",
-      "versionRange": "^1.1.2",
+      "versionRange": "^1.1.20",
       "additionalData": {}
     },
     {
       "id": "beatsaverplusplus",
-      "versionRange": "^0.1.5",
+      "versionRange": "^0.2.1",
       "additionalData": {}
     },
     {
       "id": "web-utils",
       "versionRange": "^0.6.7",
+      "additionalData": {}
+    },
+    {
+      "id": "metacore",
+      "versionRange": "^1.2.0",
+      "additionalData": {}
+    },
+    {
+      "id": "paper2_scotland2",
+      "versionRange": "^4.6.4",
       "additionalData": {}
     }
   ]

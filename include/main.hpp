@@ -4,6 +4,8 @@
 
 constexpr auto logger = Paper::ConstLoggerContext(MOD_ID);
 
+#define PLAYLIST_CUSTOM_URL "playlistDownloaderURL"
+
 #include "HMUI/ViewController.hpp"
 #include "UnityEngine/GameObject.hpp"
 #include "bsml/shared/BSML/Components/HotReloadFileWatcher.hpp"

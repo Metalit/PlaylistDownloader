@@ -7,6 +7,9 @@
 #include "customtypes/playlistdetail.hpp"
 #include "customtypes/playlistlist.hpp"
 #include "main.hpp"
+#include "metacore/shared/maps.hpp"
+#include "metacore/shared/songs.hpp"
+#include "metacore/shared/strings.hpp"
 #include "playlistcore/shared/Utils.hpp"
 #include "web-utils/shared/WebUtils.hpp"
 
@@ -15,94 +18,10 @@ using namespace PlaylistDownloader;
 // more than 50 will be invalid for one beatsaver api call
 #define PLAYLIST_SONGS_PAGE_SIZE 10
 
-// https://gist.github.com/jagt/5797948
-template <class K, class V, int MaxSize = -1>
-class cache {
-   private:
-    struct Entry {
-        K key;
-        V value;
-        Entry* prev;
-        Entry* next;
-    };
-
-    std::map<K, Entry*> dict;
-    Entry *head, *tail;
-    cache(cache const& rhs);
-    cache& operator=(cache const& rhs);
-
-    Entry* detach(Entry* entry) {
-        entry->prev->next = entry->next;
-        entry->next->prev = entry->prev;
-        return entry;
-    }
-
-    void push_front(Entry* entry) {
-        entry->next = head->next;
-        entry->next->prev = entry;
-        entry->prev = head;
-        head->next = entry;
-    }
-
-   public:
-    cache() : dict() {
-        head = new Entry();
-        tail = new Entry();
-        head->next = tail;
-        tail->prev = head;
-    }
-
-    ~cache() {
-        while (head->next != tail) {
-            delete detach(head->next);
-        }
-        delete head;
-        delete tail;
-    }
-
-    void add(K const& key, V const& value) {
-        Entry* entry = new Entry();
-        entry->key = key;
-        entry->value = value;
-        push_front(entry);
-        dict[key] = entry;
-        if constexpr (MaxSize > 0) {
-            if (size() > MaxSize)
-                drop();
-        }
-    }
-
-    V& get(K const& key) {
-        Entry* entry = dict[key];
-        // move to head
-        detach(entry);
-        push_front(entry);
-        return entry->value;
-    }
-
-    bool has(K const& key) const { return dict.contains(key); }
-
-    void drop() {
-        Entry* entry = detach(tail->prev);
-        dict.erase(entry->key);
-        delete entry;
-    }
-
-    size_t size() const {
-        size_t size = 0;
-        Entry* p = head;
-        while (p->next != tail) {
-            ++size;
-            p = p->next;
-        }
-        return size;
-    }
-};
-
 template <class T>
 struct dumb_function_copyable {
-    dumb_function_copyable(T&& arg) : arg(std::move(arg)){};
-    dumb_function_copyable(dumb_function_copyable<T> const& other) : arg(std::move(const_cast<T&>(other.arg))){};
+    dumb_function_copyable(T&& arg) : arg(std::move(arg)) {};
+    dumb_function_copyable(dumb_function_copyable<T> const& other) : arg(std::move(const_cast<T&>(other.arg))) {};
     T& get() { return arg; }
 
    private:
@@ -133,8 +52,8 @@ namespace Manager {
 
     std::vector<std::optional<BeatSaver::Models::Beatmap>> songs = {};
 
-    cache<std::string, UnityEngine::Sprite*, 50> cachedPlaylistCovers = {};
-    cache<std::string, PlaylistCore::BPList, 100> cachedPlaylists = {};
+    MetaCore::CacheMap<std::string, UnityEngine::Sprite*, 50> cachedPlaylistCovers = {};
+    MetaCore::CacheMap<std::string, PlaylistCore::BPList, 100> cachedPlaylists = {};
 
     void Refresh() {
         logger.debug("Refreshing playlists");
@@ -271,7 +190,7 @@ namespace Manager {
             }
             std::vector<std::string> hashes(count);
             for (int i = start; i < end; i++)
-                hashes.emplace_back(PlaylistCore::Utils::GetLevelHash(bpSongs[i].LevelID));
+                hashes.emplace_back(MetaCore::Songs::GetHash(bpSongs[i].LevelID));
             auto onGet = [hashes, playlist](BeatSaver::API::BeatmapMapResponse response) {
                 if (playlist != GetSelectedPlaylist())
                     return;
@@ -292,7 +211,7 @@ namespace Manager {
                     // iterate to not have to worry about case
                     for (auto& [_, map] : *response.responseData) {
                         for (auto& version : map.Versions) {
-                            if (PlaylistCore::Utils::CaseInsensitiveEquals(version.Hash, hash)) {
+                            if (MetaCore::Strings::IEquals(version.Hash, hash)) {
                                 found = true;
                                 maps.emplace_back(map);
                                 break;
@@ -374,13 +293,13 @@ namespace Manager {
     void GetPlaylistCover(Playlist* playlist, std::function<void(UnityEngine::Sprite*)> callback) {
         logger.debug("Getting playlist cover {}", playlist->Title);
         auto url = playlist->ImageURL;
-        if (cachedPlaylistCovers.has(url)) {
-            callback(cachedPlaylistCovers.get(url));
+        if (cachedPlaylistCovers.contains(url)) {
+            callback(cachedPlaylistCovers[url]);
             return;
         }
         callback = [url, fallback = playlist->FallbackImage, callback = std::move(callback)](UnityEngine::Sprite* sprite) {
             if (sprite)
-                cachedPlaylistCovers.add(url, sprite);
+                cachedPlaylistCovers[url] = sprite;
             callback(sprite ? sprite : BSML::Utilities::LoadSpriteRaw(ArrayW<uint8_t>(*fallback)));
         };
         GetSprite(url, callback);
@@ -391,11 +310,32 @@ namespace Manager {
         GetSprite(url, callback);
     }
 
+    std::string GetPlaylistURL(PlaylistCore::BPList const& playlist) {
+        if (!playlist.CustomData || !playlist.CustomData->extraFields)
+            return "";
+        auto& document = playlist.CustomData->extraFields->document;
+        if (!document.HasMember(PLAYLIST_CUSTOM_URL) || !document[PLAYLIST_CUSTOM_URL].IsString())
+            return "";
+        return document[PLAYLIST_CUSTOM_URL].GetString();
+    }
+
+    void SetPlaylistURL(PlaylistCore::BPList& playlist, std::string const& url) {
+        if (!playlist.CustomData)
+            playlist.CustomData.emplace();
+
+        if (!playlist.CustomData->SyncURL)
+            playlist.CustomData->SyncURL = url;
+
+        if (!playlist.CustomData->extraFields)
+            playlist.CustomData->extraFields.emplace();
+        auto& document = playlist.CustomData->extraFields->document;
+        document.AddMember(PLAYLIST_CUSTOM_URL, url, document.GetAllocator());
+    }
+
     PlaylistCore::Playlist* PlaylistOwned(Playlist const* downloaderPlaylist) {
         auto allLists = PlaylistCore::GetLoadedPlaylists();
         for (auto& loaded : allLists) {
-            auto& cdata = loaded->playlistJSON.CustomData;
-            if (cdata.has_value() && cdata->SyncURL == downloaderPlaylist->PlaylistURL)
+            if (GetPlaylistURL(loaded->playlistJSON) == downloaderPlaylist->PlaylistURL)
                 return loaded;
         }
         return nullptr;
@@ -409,8 +349,8 @@ namespace Manager {
     void GetPlaylistFile(Playlist* playlist, std::function<void(std::optional<PlaylistCore::BPList>)> callback) {
         logger.debug("Getting playlist file {}", playlist->Title);
         auto url = playlist->PlaylistURL;
-        if (cachedPlaylists.has(url)) {
-            callback(cachedPlaylists.get(url));
+        if (cachedPlaylists.contains(url)) {
+            callback(cachedPlaylists[url]);
             return;
         }
         WebUtils::GetAsync<WebUtils::StringResponse>({url}, [url, callback](WebUtils::StringResponse response) {
@@ -423,17 +363,13 @@ namespace Manager {
                 PlaylistCore::BPList list;
                 try {
                     ReadFromString(*response.responseData, list);
-                    if (!list.CustomData.has_value())
-                        list.CustomData.emplace();
-                    // override because it's used to check for ownership
-                    // should probably put something else in custom data instead once I update rjm
-                    list.CustomData->SyncURL = url;
+                    SetPlaylistURL(list, url);
                 } catch (JSONException const& exc) {
                     logger.error("Failed to deserialize playlist {}: {}", *response.responseData, exc.what());
                     callback(std::nullopt);
                     return;
                 }
-                cachedPlaylists.add(url, list);
+                cachedPlaylists[url] = list;
                 callback(list);
             });
         });
